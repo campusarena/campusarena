@@ -13,6 +13,7 @@ const NavBar: React.FC = () => {
   const userWithRole = session?.user as { email: string; randomKey: string };
   const role = userWithRole?.randomKey;
   const pathName = usePathname();
+
   return (
     <Navbar bg="light" expand="lg">
       <Container>
@@ -20,6 +21,7 @@ const NavBar: React.FC = () => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto justify-content-start">
+
             {currentUser
               ? [
                   <Nav.Link id="add-stuff-nav" href="/add" key="add" active={pathName === '/add'}>
@@ -28,8 +30,19 @@ const NavBar: React.FC = () => {
                   <Nav.Link id="list-stuff-nav" href="/list" key="list" active={pathName === '/list'}>
                     List Stuff
                   </Nav.Link>,
+
+                  /** ⭐ NEW: Standings link **/
+                  <Nav.Link
+                    id="standings-nav"
+                    href="/standings"
+                    key="standings"
+                    active={pathName === '/standings'}
+                  >
+                    Standings
+                  </Nav.Link>,
                 ]
               : ''}
+
             {currentUser && role === 'ADMIN' ? (
               <Nav.Link id="admin-stuff-nav" href="/admin" key="admin" active={pathName === '/admin'}>
                 Admin
@@ -38,6 +51,7 @@ const NavBar: React.FC = () => {
               ''
             )}
           </Nav>
+
           <Nav>
             {session ? (
               <NavDropdown id="login-dropdown" title={currentUser}>
@@ -63,6 +77,7 @@ const NavBar: React.FC = () => {
               </NavDropdown>
             )}
           </Nav>
+
         </Navbar.Collapse>
       </Container>
     </Navbar>
