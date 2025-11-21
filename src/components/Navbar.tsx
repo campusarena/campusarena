@@ -28,9 +28,6 @@ export default function NavBar() {
             <Link href="/about" className="nav-link ca-nav-link">
               About
             </Link>
-            <Link href="/standings" className="nav-link ca-nav-link">
-              Standings
-            </Link>
           </Nav>
 
           {/* ---------- AUTH CONTROLS ---------- */}

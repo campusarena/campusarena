@@ -11,10 +11,8 @@ type SignUpForm = {
   email: string;
   password: string;
   confirmPassword: string;
-  // acceptTerms: boolean;
 };
 
-/** The sign up page. */
 const SignUp = () => {
   const validationSchema = Yup.object().shape({
     email: Yup.string().required('Email is required').email('Email is invalid'),
@@ -37,58 +35,70 @@ const SignUp = () => {
   });
 
   const onSubmit = async (data: SignUpForm) => {
-    // console.log(JSON.stringify(data, null, 2));
     await createUser(data);
-    // After creating, signIn with redirect to the add page
     await signIn('credentials', { callbackUrl: '/add', ...data });
   };
 
   return (
-    <main>
+    <main className="ca-auth-page">
       <Container>
         <Row className="justify-content-center">
-          <Col xs={5}>
-            <h1 className="text-center">Sign Up</h1>
-            <Card>
+          <Col xs={12} md={6} lg={4}>
+            <h1 className="text-center mb-4 text-white">Sign Up</h1>
+
+            <Card className="ca-auth-card">
               <Card.Body>
                 <Form onSubmit={handleSubmit(onSubmit)}>
-                  <Form.Group className="form-group">
+                  <Form.Group className="mb-3">
                     <Form.Label>Email</Form.Label>
                     <input
                       type="text"
                       {...register('email')}
-                      className={`form-control ${errors.email ? 'is-invalid' : ''}`}
+                      className={`form-control ca-auth-input ${errors.email ? 'is-invalid' : ''}`}
                     />
-                    <div className="invalid-feedback">{errors.email?.message}</div>
+                    <div className="invalid-feedback">
+                      {errors.email?.message}
+                    </div>
                   </Form.Group>
 
-                  <Form.Group className="form-group">
+                  <Form.Group className="mb-3">
                     <Form.Label>Password</Form.Label>
                     <input
                       type="password"
                       {...register('password')}
-                      className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                      className={`form-control ca-auth-input ${errors.password ? 'is-invalid' : ''}`}
                     />
-                    <div className="invalid-feedback">{errors.password?.message}</div>
+                    <div className="invalid-feedback">
+                      {errors.password?.message}
+                    </div>
                   </Form.Group>
-                  <Form.Group className="form-group">
+
+                  <Form.Group className="mb-3">
                     <Form.Label>Confirm Password</Form.Label>
                     <input
                       type="password"
                       {...register('confirmPassword')}
-                      className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
+                      className={`form-control ca-auth-input ${errors.confirmPassword ? 'is-invalid' : ''}`}
                     />
-                    <div className="invalid-feedback">{errors.confirmPassword?.message}</div>
+                    <div className="invalid-feedback">
+                      {errors.confirmPassword?.message}
+                    </div>
                   </Form.Group>
-                  <Form.Group className="form-group py-3">
-                    <Row>
+
+                  <Form.Group className="py-2">
+                    <Row className="g-2">
                       <Col>
-                        <Button type="submit" className="btn btn-primary">
+                        <Button type="submit" className="ca-auth-button">
                           Register
                         </Button>
                       </Col>
                       <Col>
-                        <Button type="button" onClick={() => reset()} className="btn btn-warning float-right">
+                        <Button
+                          type="button"
+                          onClick={() => reset()}
+                          className="w-100"
+                          variant="outline-light"
+                        >
                           Reset
                         </Button>
                       </Col>
@@ -96,7 +106,8 @@ const SignUp = () => {
                   </Form.Group>
                 </Form>
               </Card.Body>
-              <Card.Footer>
+
+              <Card.Footer className="ca-auth-footer text-center">
                 Already have an account?
                 <a href="/auth/signin">Sign in</a>
               </Card.Footer>
