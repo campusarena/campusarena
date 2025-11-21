@@ -314,3 +314,58 @@
   background: rgba(255, 255, 255, 0.07);
   color: #fff;
 }
+
+/* =========================================================
+   STANDINGS PAGE
+   ========================================================= */
+
+/* Page background (same vibe as hero, but scrollable) */
+.ca-standings-page {
+  padding: 4rem 0 5rem;
+  background:
+    radial-gradient(circle at top left, rgba(91, 141, 255, 0.28) 0, transparent 55%),
+    radial-gradient(circle at top right, rgba(168, 85, 255, 0.28) 0, transparent 50%),
+    radial-gradient(circle at bottom, rgba(255, 79, 163, 0.22) 0, transparent 55%),
+    #050509;
+}
+
+/* Dark “card” wrapper around the table */
+.ca-standings-table {
+  background: #101116;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+
+/* Make the table itself respect our dark theme */
+.ca-standings-table table,
+.ca-standings-table thead,
+.ca-standings-table tbody {
+  background: transparent;
+  color: #f4f4f8;
+}
+
+/* Header row */
+.ca-standings-table thead {
+  background: #181924;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Cell borders */
+.ca-standings-table th,
+.ca-standings-table td {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Subtle zebra stripes + hover state */
+.ca-standings-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ca-standings-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
