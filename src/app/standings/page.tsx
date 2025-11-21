@@ -1,5 +1,7 @@
-// src/app/standings/page.tsx
+"use client";
+
 import React from "react";
+import { Container, Row, Col, Card, Badge } from "react-bootstrap";
 
 interface TeamStanding {
   team: string;
@@ -78,49 +80,79 @@ const mockTournaments: Tournament[] = [
 
 export default function StandingsPage() {
   return (
-    <main className="container mt-4 mb-5">
-      <h1 className="mb-4">Tournament Standings</h1>
+    <section className="ca-standings-page">
+      <Container>
+        {/* Page header */}
+        <Row className="mb-5 text-center">
+          <Col>
+            <h1 className="fw-bold text-white mb-2">Season Standings</h1>
+            <p className="ca-section-subtitle">Current local league standings</p>
+          </Col>
+        </Row>
 
-      {mockTournaments.map((tournament, index) => (
-        <div key={index} className="card mb-4 p-3 shadow-sm">
-          <h3 className="mb-2">{tournament.name}</h3>
-          <p className="text-muted">
-            <strong>Next Match:</strong> {tournament.nextMatch}
-          </p>
+        {/* League cards */}
+        <Row xs={1} md={2} className="g-4">
+          {mockTournaments.map((tournament, index) => (
+            <Col key={index}>
+              <Card className="ca-feature-card h-100">
+                <Card.Body>
+                  {/* Header */}
+                  <div className="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                      <h5 className="fw-semibold text-white mb-1">
+                        {tournament.name}
+                      </h5>
+                      <div className="ca-section-subtitle small">
+                        Next match {tournament.nextMatch}
+                      </div>
+                    </div>
+                    <Badge className="ca-event-tag">Demo league</Badge>
+                  </div>
 
-          {/* Standings Table */}
-          <table className="table table-striped mt-3">
-            <thead>
-              <tr>
-                <th>Team</th>
-                <th>Wins</th>
-                <th>Losses</th>
-                <th>Points</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tournament.standings.map((team, idx) => (
-                <tr key={idx}>
-                  <td>{team.team}</td>
-                  <td>{team.wins}</td>
-                  <td>{team.losses}</td>
-                  <td>{team.points}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  {/* Standings table */}
+                  <div className="ca-standings-table mt-3">
+                    <table className="table table-sm mb-0">
+                      <thead>
+                        <tr>
+                          <th>Team</th>
+                          <th className="text-center">W</th>
+                          <th className="text-center">L</th>
+                          <th className="text-center">Pts</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tournament.standings.map((team, idx) => (
+                          <tr key={idx}>
+                            <td>{team.team}</td>
+                            <td className="text-center">{team.wins}</td>
+                            <td className="text-center">{team.losses}</td>
+                            <td className="text-center">{team.points}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-          {/* Leaders */}
-          <h5 className="mt-4">Top 3 Leaders</h5>
-          <ul>
-            {tournament.leaders.map((leader, idx) => (
-              <li key={idx}>
-                {leader.name} — <strong>{leader.score}</strong> pts
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </main>
+                  {/* Top 3 */}
+                  <div className="mt-3">
+                    <div className="text-secondary text-uppercase small mb-1">
+                      Top three
+                    </div>
+                    <ol className="mb-0 ca-feature-text small ps-3">
+                      {tournament.leaders.map((leader, idx) => (
+                        <li key={idx} className="d-flex justify-content-between">
+                          <span>{leader.name}</span>
+                          <span>{leader.score} pts</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </Container>
+    </section>
   );
 }

@@ -1,87 +1,77 @@
-/* eslint-disable react/jsx-indent, @typescript-eslint/indent */
+"use client";
 
-'use client';
+import { Navbar, Nav, Container, Button, NavDropdown } from "react-bootstrap";
+import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
 
-import { useSession } from 'next-auth/react';
-import { usePathname } from 'next/navigation';
-import { Container, Nav, Navbar, NavDropdown } from 'react-bootstrap';
-import { BoxArrowRight, Lock, PersonFill, PersonPlusFill } from 'react-bootstrap-icons';
-
-const NavBar: React.FC = () => {
+export default function NavBar() {
   const { data: session } = useSession();
-  const currentUser = session?.user?.email;
-  const userWithRole = session?.user as { email: string; randomKey: string };
-  const role = userWithRole?.randomKey;
-  const pathName = usePathname();
+  const userEmail = session?.user?.email;
 
   return (
-    <Navbar bg="light" expand="lg">
+    <Navbar expand="lg" className="ca-glass-nav">
       <Container>
-        <Navbar.Brand href="/">Next.js Application Template</Navbar.Brand>
-        <Navbar.Toggle aria-controls="basic-navbar-nav" />
-        <Navbar.Collapse id="basic-navbar-nav">
-          <Nav className="me-auto justify-content-start">
+        <Link href="/" className="navbar-brand fw-bold text-white text-decoration-none">
+          CampusArena
+        </Link>
 
-            {currentUser
-              ? [
-                  <Nav.Link id="add-stuff-nav" href="/add" key="add" active={pathName === '/add'}>
-                    Add Stuff
-                  </Nav.Link>,
-                  <Nav.Link id="list-stuff-nav" href="/list" key="list" active={pathName === '/list'}>
-                    List Stuff
-                  </Nav.Link>,
-
-                  /** ⭐ NEW: Standings link **/
-                  <Nav.Link
-                    id="standings-nav"
-                    href="/standings"
-                    key="standings"
-                    active={pathName === '/standings'}
-                  >
-                    Standings
-                  </Nav.Link>,
-                ]
-              : ''}
-
-            {currentUser && role === 'ADMIN' ? (
-              <Nav.Link id="admin-stuff-nav" href="/admin" key="admin" active={pathName === '/admin'}>
-                Admin
-              </Nav.Link>
-            ) : (
-              ''
-            )}
+        <Navbar.Toggle aria-controls="nav" />
+        <Navbar.Collapse id="nav" className="justify-content-end">
+          {/* ---------- LEFT NAV LINKS ---------- */}
+          <Nav className="me-auto">
+            <Link href="/events" className="nav-link ca-nav-link">
+              Events
+            </Link>
+            <Link href="/features" className="nav-link ca-nav-link">
+              Features
+            </Link>
+            <Link href="/about" className="nav-link ca-nav-link">
+              About
+            </Link>
+            <Link href="/standings" className="nav-link ca-nav-link">
+              Standings
+            </Link>
           </Nav>
 
-          <Nav>
-            {session ? (
-              <NavDropdown id="login-dropdown" title={currentUser}>
-                <NavDropdown.Item id="login-dropdown-sign-out" href="/api/auth/signout">
-                  <BoxArrowRight />
-                  Sign Out
-                </NavDropdown.Item>
-                <NavDropdown.Item id="login-dropdown-change-password" href="/auth/change-password">
-                  <Lock />
+          {/* ---------- AUTH CONTROLS ---------- */}
+          {!session && (
+            <Nav className="d-flex align-items-center gap-2">
+              <Link href="/auth/signin">
+                <Button variant="outline-light" size="sm" className="ca-glass-button">
+                  Sign in
+                </Button>
+              </Link>
+              <Link href="/auth/signup">
+                <Button variant="light" size="sm" className="ca-solid-button">
+                  Sign up
+                </Button>
+              </Link>
+            </Nav>
+          )}
+
+          {session && (
+            <Nav>
+              <NavDropdown
+                align="end"
+                title={<span className="text-white">{userEmail}</span>}
+                id="user-dropdown"
+                className="ca-nav-dropdown"
+              >
+                <NavDropdown.Item as={Link} href="/auth/change-password">
                   Change Password
                 </NavDropdown.Item>
-              </NavDropdown>
-            ) : (
-              <NavDropdown id="login-dropdown" title="Login">
-                <NavDropdown.Item id="login-dropdown-sign-in" href="/auth/signin">
-                  <PersonFill />
-                  Sign in
-                </NavDropdown.Item>
-                <NavDropdown.Item id="login-dropdown-sign-up" href="/auth/signup">
-                  <PersonPlusFill />
-                  Sign up
-                </NavDropdown.Item>
-              </NavDropdown>
-            )}
-          </Nav>
 
+                <NavDropdown.Item
+                  onClick={() => signOut({ callbackUrl: "/", redirect: true })}
+                  className="text-danger"
+                >
+                  Sign Out
+                </NavDropdown.Item>
+              </NavDropdown>
+            </Nav>
+          )}
         </Navbar.Collapse>
       </Container>
     </Navbar>
   );
-};
-
-export default NavBar;
+}
