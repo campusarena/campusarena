@@ -13,13 +13,13 @@ type ChangePasswordForm = {
   oldpassword: string;
   password: string;
   confirmPassword: string;
-  // acceptTerms: boolean;
 };
 
 /** The change password page. */
 const ChangePassword = () => {
   const { data: session, status } = useSession();
   const email = session?.user?.email || '';
+
   const validationSchema = Yup.object().shape({
     oldpassword: Yup.string().required('Password is required'),
     password: Yup.string()
@@ -41,62 +41,74 @@ const ChangePassword = () => {
   });
 
   const onSubmit = async (data: ChangePasswordForm) => {
-    // console.log(JSON.stringify(data, null, 2));
     await changePassword({ email, ...data });
     await swal('Password Changed', 'Your password has been changed', 'success', { timer: 2000 });
     reset();
   };
 
   if (status === 'loading') {
-    return <LoadingSpinner />;
+    return (
+      <main className="ca-auth-page">
+        <LoadingSpinner />
+      </main>
+    );
   }
 
   return (
-    <main>
+    <main className="ca-auth-page">
       <Container>
         <Row className="justify-content-center">
-          <Col xs={5}>
-            <h1 className="text-center">Change Password</h1>
-            <Card>
+          <Col xs={12} md={6} lg={4}>
+            <h1 className="text-center mb-4 text-white">Change Password</h1>
+
+            <Card className="ca-auth-card">
               <Card.Body>
                 <Form onSubmit={handleSubmit(onSubmit)}>
-                  <Form.Group className="form-group">
-                    <Form.Label>Old Passord</Form.Label>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Old Password</Form.Label>
                     <input
                       type="password"
                       {...register('oldpassword')}
-                      className={`form-control ${errors.oldpassword ? 'is-invalid' : ''}`}
+                      className={`form-control ca-auth-input ${errors.oldpassword ? 'is-invalid' : ''}`}
                     />
                     <div className="invalid-feedback">{errors.oldpassword?.message}</div>
                   </Form.Group>
 
-                  <Form.Group className="form-group">
+                  <Form.Group className="mb-3">
                     <Form.Label>New Password</Form.Label>
                     <input
                       type="password"
                       {...register('password')}
-                      className={`form-control ${errors.password ? 'is-invalid' : ''}`}
+                      className={`form-control ca-auth-input ${errors.password ? 'is-invalid' : ''}`}
                     />
                     <div className="invalid-feedback">{errors.password?.message}</div>
                   </Form.Group>
-                  <Form.Group className="form-group">
+
+                  <Form.Group className="mb-3">
                     <Form.Label>Confirm Password</Form.Label>
                     <input
                       type="password"
                       {...register('confirmPassword')}
-                      className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
+                      className={`form-control ca-auth-input ${errors.confirmPassword ? 'is-invalid' : ''}`}
                     />
                     <div className="invalid-feedback">{errors.confirmPassword?.message}</div>
                   </Form.Group>
-                  <Form.Group className="form-group py-3">
-                    <Row>
+
+                  <Form.Group className="py-2">
+                    <Row className="g-2">
                       <Col>
-                        <Button type="submit" className="btn btn-primary">
+                        <Button type="submit" className="ca-auth-button">
                           Change
                         </Button>
                       </Col>
                       <Col>
-                        <Button type="button" onClick={() => reset()} className="btn btn-warning float-right">
+                        <Button
+                          type="button"
+                          onClick={() => reset()}
+                          variant="outline-light"
+                          className="w-100"
+                          style={{ borderRadius: '999px' }}
+                        >
                           Reset
                         </Button>
                       </Col>
