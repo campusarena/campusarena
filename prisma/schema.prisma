@@ -43,3 +43,47 @@ model Stuff {
   condition Condition @default(good)
   owner     String
 }
+
+model Tournament {
+  id          Int      @id @default(autoincrement())
+  name        String
+  game        String
+  startDate   DateTime
+  endDate     DateTime?
+  maxTeams    Int
+  status      String   @default("upcoming") // upcoming, ongoing, completed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  matches     Match[]
+  teams       Team[]
+}
+
+model Team {
+  id           Int          @id @default(autoincrement())
+  name         String
+  tournamentId Int
+  tournament   Tournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  seed         Int?
+  homeMatches  Match[]      @relation("HomeTeam")
+  awayMatches  Match[]      @relation("AwayTeam")
+  createdAt    DateTime     @default(now())
+}
+
+model Match {
+  id           Int        @id @default(autoincrement())
+  tournamentId Int
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round        Int        // 1 = Finals, 2 = Semi-finals, 3 = Quarter-finals, etc.
+  matchNumber  Int        // Position in that round
+  homeTeamId   Int?
+  homeTeam     Team?      @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeamId   Int?
+  awayTeam     Team?      @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  homeScore    Int?
+  awayScore    Int?
+  winnerId     Int?
+  scheduledAt  DateTime?
+  completedAt  DateTime?
+  status       String     @default("pending") // pending, ongoing, completed
+  createdAt    DateTime   @default(now())
+}
