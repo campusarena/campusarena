@@ -9,36 +9,64 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
 }
 
 model User {
   id       Int    @id @default(autoincrement())
   email    String @unique
   password String
-  role     String @default("USER")
+  role     Role   @default(USER)
+}
+
+enum Condition {
+  excellent
+  good
+  fair
+  poor
 }
 
 model Stuff {
-  id        Int    @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   name      String
   quantity  Int
-  condition String @default("good")
+  condition Condition @default(good)
   owner     String
 }
 
+enum EventType {
+  TOURNAMENT
+  LEAGUE
+  PICKUP
+  PRACTICE
+}
+
+enum EventFormat {
+  ROUND_ROBIN
+  SINGLE_ELIMINATION
+  DOUBLE_ELIMINATION
+  SWISS
+  FREE_FOR_ALL
+}
+
 model Event {
-  id              Int      @id @default(autoincrement())
+  id              Int         @id @default(autoincrement())
   name            String
   description     String
-  type            String
-  format          String
+  type            EventType
+  format          EventFormat
   startDate       DateTime
   endDate         DateTime?
   numberOfPlayers Int
-  isPublic        Boolean  @default(false)
+  isPublic        Boolean     @default(false)
   owner           String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 }
