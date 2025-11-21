@@ -43,6 +43,18 @@ export default function NavBar() {
                   Sign up
                 </Button>
               </Link>
+                <Link href="/events" className="nav-link ca-nav-link">
+                  Events
+                </Link>
+              <Link href="/create-event" className="nav-link ca-nav-link">
+                Create Event
+              </Link>
+              <Link href="/standings" className="nav-link ca-nav-link">
+                Standings
+              </Link>
+              <Link href="/match" className="nav-link ca-nav-link">
+                Match
+              </Link>
             </Nav>
           )}
 
