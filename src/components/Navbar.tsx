@@ -31,7 +31,7 @@ export default function NavBar() {
             <Link href="/dashboard" className="nav-link ca-nav-link">
               Dashboard
             </Link>
-            <Link href="/create-event" className="nav-link ca-nav-link">
+            <Link href="/event" className="nav-link ca-nav-link">
               Create Event
             </Link>
             <Link href="/standings" className="nav-link ca-nav-link">
