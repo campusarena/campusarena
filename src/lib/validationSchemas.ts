@@ -14,3 +14,14 @@ export const EditStuffSchema = Yup.object({
   condition: Yup.string().oneOf(['excellent', 'good', 'fair', 'poor']).required(),
   owner: Yup.string().required(),
 });
+
+export const CreateEventSchema = Yup.object({
+  name: Yup.string().required(),
+  description: Yup.string().required(),
+  type: Yup.string().required(),
+  format: Yup.string().required(),
+  startDate: Yup.string().required(),
+  endDate: Yup.string(),
+  numberOfPlayers: Yup.number().positive().required(),
+  owner: Yup.string().required(),
+});
