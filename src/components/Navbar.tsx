@@ -28,6 +28,18 @@ export default function NavBar() {
             <Link href="/about" className="nav-link ca-nav-link">
               About
             </Link>
+            <Link href="/dashboard" className="nav-link ca-nav-link">
+              Dashboard
+            </Link>
+            <Link href="/create-event" className="nav-link ca-nav-link">
+              Create Event
+            </Link>
+            <Link href="/standings" className="nav-link ca-nav-link">
+              Standings
+            </Link>
+            <Link href="/match" className="nav-link ca-nav-link">
+              Match
+            </Link>
           </Nav>
 
           {/* ---------- AUTH CONTROLS ---------- */}
@@ -42,18 +54,6 @@ export default function NavBar() {
                 <Button variant="light" size="sm" className="ca-solid-button">
                   Sign up
                 </Button>
-              </Link>
-                <Link href="/dashboard" className="nav-link ca-nav-link">
-                  Dashboard
-                </Link>
-              <Link href="/create-event" className="nav-link ca-nav-link">
-                  Create Event
-              </Link>
-              <Link href="/standings" className="nav-link ca-nav-link">
-                  Standings
-              </Link>
-              <Link href="/match" className="nav-link ca-nav-link">
-                  Match
               </Link>
             </Nav>
           )}
