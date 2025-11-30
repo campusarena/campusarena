@@ -1,89 +1,220 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  // for local development
   url      = env("DATABASE_URL")
-  // for Vercel
-  // url       = env("POSTGRES_PRISMA_URL")
-  // directUrl = env("POSTGRES_URL_NON_POOLING")
 }
+
+/* =========================
+   GLOBAL ENUMS
+   ========================= */
 
 enum Role {
   USER
   ADMIN
 }
 
+enum EventFormat {
+  SINGLE_ELIM
+  // Future: DOUBLE_ELIM, ROUND_ROBIN, SWISS, etc.
+}
+
+enum MatchStatus {
+  PENDING
+  SCHEDULED
+  REPORTED
+  VERIFIED
+  CANCELED
+}
+
+enum EventRole {
+  OWNER
+  ORGANIZER
+}
+
+enum ReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/* =========================
+   USERS
+   ========================= */
+
 model User {
   id       Int    @id @default(autoincrement())
   email    String @unique
   password String
   role     Role   @default(USER)
+
+  participants    Participant[]
+  teamMemberships TeamMember[]
+  eventRoles      EventRoleAssignment[]
 }
 
-enum Condition {
-  excellent
-  good
-  fair
-  poor
-}
-
-model Stuff {
-  id        Int       @id @default(autoincrement())
-  name      String
-  quantity  Int
-  condition Condition @default(good)
-  owner     String
-}
+/* =========================
+   TOURNAMENTS / EVENTS
+   ========================= */
 
 model Tournament {
-  id          Int      @id @default(autoincrement())
-  name        String
-  game        String
-  startDate   DateTime
-  endDate     DateTime?
-  maxTeams    Int
-  status      String   @default("upcoming") // upcoming, ongoing, completed
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  matches     Match[]
-  teams       Team[]
+  id              Int          @id @default(autoincrement())
+  name            String
+  game            String
+  format          EventFormat  @default(SINGLE_ELIM)
+  isTeamBased     Boolean      @default(true)  // true = team events, false = individual
+
+  startDate       DateTime
+  endDate         DateTime?
+  status          String       @default("upcoming") // upcoming, ongoing, completed
+
+  maxParticipants Int?
+  location        String?      // free-form location text
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  matches         Match[]
+  teams           Team[]
+  participants    Participant[]
+  staff           EventRoleAssignment[]
 }
+
+/* =========================
+   TEAMS & MEMBERS
+   ========================= */
 
 model Team {
   id           Int          @id @default(autoincrement())
-  name         String
   tournamentId Int
+  name         String
+  tag          String?
+
   tournament   Tournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  seed         Int?
-  homeMatches  Match[]      @relation("HomeTeam")
-  awayMatches  Match[]      @relation("AwayTeam")
+  members      TeamMember[]
+  participants Participant[]
+
   createdAt    DateTime     @default(now())
+
+  @@unique([tournamentId, name])
 }
 
-model Match {
+model TeamMember {
+  id        Int    @id @default(autoincrement())
+  teamId    Int
+  userId    Int
+  isCaptain Boolean @default(false)
+
+  team      Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User   @relation(fields: [userId], references: [id])
+
+  @@unique([teamId, userId])
+}
+
+/* =========================
+   PARTICIPANTS (ENTRY IN EVENT)
+   ========================= */
+
+model Participant {
   id           Int        @id @default(autoincrement())
   tournamentId Int
+  userId       Int?       // filled for individual events
+  teamId       Int?       // filled for team events
+  seed         Int?
+  joinedAt     DateTime   @default(now())
+
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  round        Int        // 1 = Finals, 2 = Semi-finals, 3 = Quarter-finals, etc.
-  matchNumber  Int        // Position in that round
-  homeTeamId   Int?
-  homeTeam     Team?      @relation("HomeTeam", fields: [homeTeamId], references: [id])
-  awayTeamId   Int?
-  awayTeam     Team?      @relation("AwayTeam", fields: [awayTeamId], references: [id])
-  homeScore    Int?
-  awayScore    Int?
+  user         User?      @relation(fields: [userId], references: [id])
+  team         Team?      @relation(fields: [teamId], references: [id])
+
+  matchesAsP1  Match[]    @relation("MatchP1")
+  matchesAsP2  Match[]    @relation("MatchP2")
+  matchesWon   Match[]    @relation("MatchWinner")
+
+  @@index([tournamentId])
+  // App invariant: exactly one of userId or teamId is non-null.
+}
+
+/* =========================
+   EVENT ROLES (OWNER / ORGANIZER)
+   ========================= */
+
+model EventRoleAssignment {
+  id           Int        @id @default(autoincrement())
+  tournamentId Int
+  userId       Int
+  role         EventRole
+
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id])
+
+  @@unique([tournamentId, userId, role])
+}
+
+/* =========================
+   MATCHES
+   ========================= */
+
+model Match {
+  id           Int         @id @default(autoincrement())
+  tournamentId Int
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  // Bracket position
+  roundNumber  Int?        // 1 = first round, 2 = second round, etc.
+  slotIndex    Int?        // position within that round
+
+  // Participants (teams or individuals via Participant)
+  p1Id         Int?
+  p2Id         Int?
   winnerId     Int?
+
+  p1           Participant? @relation("MatchP1", fields: [p1Id], references: [id])
+  p2           Participant? @relation("MatchP2", fields: [p2Id], references: [id])
+  winner       Participant? @relation("MatchWinner", fields: [winnerId], references: [id])
+
+  p1Score      Int?
+  p2Score      Int?
+
   scheduledAt  DateTime?
   completedAt  DateTime?
-  status       String     @default("pending") // pending, ongoing, completed
-  createdAt    DateTime   @default(now())
+  location     String?      // free-form location text
+
+  status       MatchStatus  @default(PENDING)
+
+  // Optional: bracket wiring for single elim
+  nextMatchId  Int?
+  nextMatch    Match?       @relation("MatchNext", fields: [nextMatchId], references: [id])
+  children     Match[]      @relation("MatchNext")
+
+  createdAt    DateTime     @default(now())
+
+  reports      MatchReport[]
+
+  @@index([tournamentId, roundNumber])
+  @@index([tournamentId, status])
+}
+
+/* =========================
+   MATCH REPORTS
+   ========================= */
+
+model MatchReport {
+  id                   Int          @id @default(autoincrement())
+  matchId              Int
+  reportedById         Int          // user who submitted the result
+  p1Score              Int
+  p2Score              Int
+  winnerParticipantId  Int
+  status               ReportStatus @default(PENDING)
+
+  createdAt            DateTime     @default(now())
+  reviewedAt           DateTime?
+  reviewedByRoleId     Int?         // an EventRoleAssignment row
+
+  match                Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  reportedBy           User         @relation(fields: [reportedById], references: [id])
+  reviewedByRole       EventRoleAssignment? @relation(fields: [reviewedByRoleId], references: [id])
 }
