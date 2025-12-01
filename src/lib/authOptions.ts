@@ -19,8 +19,8 @@ const authOptions: NextAuthOptions = {
         },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials?: Record<string, string> | undefined) {
-        if (!credentials?.email || !credentials?.password) {
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials.password) {
           return null;
         }
         const user = await prisma.user.findUnique({
@@ -31,8 +31,6 @@ const authOptions: NextAuthOptions = {
         if (!user) {
           return null;
         }
-
-        if (!user.password) return null;
 
         const isPasswordValid = await compare(credentials.password, user.password);
         if (!isPasswordValid) {
@@ -56,25 +54,26 @@ const authOptions: NextAuthOptions = {
   },
   callbacks: {
     session: ({ session, token }) => {
-      // attach id and randomKey from token to session user (token may be any)
-      const t = token as unknown as Record<string, unknown>;
+      // console.log('Session Callback', { session, token })
       return {
         ...session,
         user: {
           ...session.user,
-          id: (t.id as string) ?? undefined,
-          randomKey: (t.randomKey as string) ?? undefined,
+          id: token.id,
+          randomKey: token.randomKey,
         },
       };
     },
     jwt: ({ token, user }) => {
-      // when a user signs in, include their id and randomKey on the JWT
+      // console.log('JWT Callback', { token, user })
       if (user) {
-        const u = user as unknown as Record<string, unknown>;
+        // Narrow the type instead of using `any`
+        const u = user as { id?: string | number; randomKey?: string };
+
         return {
           ...token,
-          id: (u.id as string) ?? token.id,
-          randomKey: (u.randomKey as string) ?? token.randomKey,
+          id: u.id,
+          randomKey: u.randomKey,
         };
       }
       return token;
