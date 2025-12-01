@@ -32,24 +32,18 @@ export default function NavBar() {
             <Link href="/about" className="nav-link ca-nav-link">
               About
             </Link>
-
-            {/* Auth-only links */}
-            {session && (
-              <>
-                <Link href="/dashboard" className="nav-link ca-nav-link">
-                  Dashboard
-                </Link>
-                <Link href="/event" className="nav-link ca-nav-link">
-                  Create Event
-                </Link>
-                <Link href="/standings" className="nav-link ca-nav-link">
-                  Standings
-                </Link>
-                <Link href="/match" className="nav-link ca-nav-link">
-                  Match
-                </Link>
-              </>
-            )}
+            <Link href="/dashboard" className="nav-link ca-nav-link">
+              Dashboard
+            </Link>
+            <Link href="/event" className="nav-link ca-nav-link">
+              Create Event
+            </Link>
+            <Link href="/standings" className="nav-link ca-nav-link">
+              Standings
+            </Link>
+            <Link href="/match" className="nav-link ca-nav-link">
+              Match
+            </Link>
           </Nav>
 
           {/* ---------- AUTH CONTROLS (RIGHT SIDE) ---------- */}
