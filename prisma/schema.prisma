@@ -7,10 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/* =========================
-   GLOBAL ENUMS
-   ========================= */
-
 enum Role {
   USER
   ADMIN
@@ -40,10 +36,6 @@ enum ReportStatus {
   REJECTED
 }
 
-/* =========================
-   USERS
-   ========================= */
-
 model User {
   id       Int    @id @default(autoincrement())
   email    String @unique
@@ -55,9 +47,6 @@ model User {
   eventRoles      EventRoleAssignment[]
 }
 
-/* =========================
-   TOURNAMENTS / EVENTS
-   ========================= */
 
 model Tournament {
   id              Int          @id @default(autoincrement())
@@ -82,9 +71,6 @@ model Tournament {
   staff           EventRoleAssignment[]
 }
 
-/* =========================
-   TEAMS & MEMBERS
-   ========================= */
 
 model Team {
   id           Int          @id @default(autoincrement())
@@ -113,9 +99,6 @@ model TeamMember {
   @@unique([teamId, userId])
 }
 
-/* =========================
-   PARTICIPANTS (ENTRY IN EVENT)
-   ========================= */
 
 model Participant {
   id           Int        @id @default(autoincrement())
@@ -137,10 +120,6 @@ model Participant {
   // App invariant: exactly one of userId or teamId is non-null.
 }
 
-/* =========================
-   EVENT ROLES (OWNER / ORGANIZER)
-   ========================= */
-
 model EventRoleAssignment {
   id           Int        @id @default(autoincrement())
   tournamentId Int
@@ -152,10 +131,6 @@ model EventRoleAssignment {
 
   @@unique([tournamentId, userId, role])
 }
-
-/* =========================
-   MATCHES
-   ========================= */
 
 model Match {
   id           Int         @id @default(autoincrement())
@@ -197,9 +172,6 @@ model Match {
   @@index([tournamentId, status])
 }
 
-/* =========================
-   MATCH REPORTS
-   ========================= */
 
 model MatchReport {
   id                   Int          @id @default(autoincrement())
