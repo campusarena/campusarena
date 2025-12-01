@@ -17,14 +17,13 @@ import { prisma } from './prisma';
  * Legacy addStuff placeholder.
  * No longer writes to the database.
  */
-export async function addStuff(stuff: {
+export async function addStuff(_stuff: {
   name: string;
   quantity: number;
   owner: string;
   condition: string;
 }) {
   console.warn('addStuff() was called, but the Stuff model has been removed. Redirecting to home.');
-  // In case any old form still submits here, just send the user somewhere safe.
   redirect('/');
 }
 
@@ -32,7 +31,7 @@ export async function addStuff(stuff: {
  * Legacy editStuff placeholder.
  * No longer writes to the database.
  */
-export async function editStuff(stuff: {
+export async function editStuff(_stuff: {
   id: number;
   name: string;
   quantity: number;
@@ -47,7 +46,7 @@ export async function editStuff(stuff: {
  * Legacy deleteStuff placeholder.
  * No longer writes to the database.
  */
-export async function deleteStuff(id: number) {
+export async function deleteStuff(_id: number) {
   console.warn('deleteStuff() was called, but the Stuff model has been removed. Redirecting to home.');
   redirect('/');
 }
@@ -59,13 +58,8 @@ export async function deleteStuff(id: number) {
 /**
  * Creates a new user in the database.
  * Used by the Sign Up page.
- *
- * NOTE: In production you should enforce email uniqueness and
- * maybe send verification emails, but for ICS-style projects
- * this is enough.
  */
 export async function createUser(credentials: { email: string; password: string }) {
-  // console.log(`createUser data: ${JSON.stringify(credentials, null, 2)}`);
   const password = await hash(credentials.password, 10);
 
   await prisma.user.create({
@@ -79,16 +73,8 @@ export async function createUser(credentials: { email: string; password: string 
 
 /**
  * Changes the password of an existing user in the database.
- * Currently assumes the caller has already validated the old
- * password on the frontend or via NextAuth.
- *
- * You could extend this later to:
- *  - fetch the user
- *  - compare oldpassword via bcrypt.compare
- *  - throw if mismatch
  */
 export async function changePassword(credentials: { email: string; password: string }) {
-  // console.log(`changePassword data: ${JSON.stringify(credentials, null, 2)}`);
   const password = await hash(credentials.password, 10);
 
   await prisma.user.update({
