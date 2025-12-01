@@ -42,11 +42,11 @@ model User {
   password String
   role     Role   @default(USER)
 
-  participants    Participant[]
-  teamMemberships TeamMember[]
-  eventRoles      EventRoleAssignment[]
+  participants     Participant[]
+  teamMemberships  TeamMember[]
+  eventRoles       EventRoleAssignment[]
+  submittedReports MatchReport[] @relation("ReportedByUser")
 }
-
 
 model Tournament {
   id              Int          @id @default(autoincrement())
@@ -70,7 +70,6 @@ model Tournament {
   participants    Participant[]
   staff           EventRoleAssignment[]
 }
-
 
 model Team {
   id           Int          @id @default(autoincrement())
@@ -98,7 +97,6 @@ model TeamMember {
 
   @@unique([teamId, userId])
 }
-
 
 model Participant {
   id           Int        @id @default(autoincrement())
@@ -128,6 +126,8 @@ model EventRoleAssignment {
 
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   user         User       @relation(fields: [userId], references: [id])
+
+  reviewedReports MatchReport[] @relation("ReviewedByRole")
 
   @@unique([tournamentId, userId, role])
 }
@@ -172,7 +172,6 @@ model Match {
   @@index([tournamentId, status])
 }
 
-
 model MatchReport {
   id                   Int          @id @default(autoincrement())
   matchId              Int
@@ -186,7 +185,11 @@ model MatchReport {
   reviewedAt           DateTime?
   reviewedByRoleId     Int?         // an EventRoleAssignment row
 
-  match                Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  reportedBy           User         @relation(fields: [reportedById], references: [id])
-  reviewedByRole       EventRoleAssignment? @relation(fields: [reviewedByRoleId], references: [id])
+  match          Match               @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  // MatchReport ↔ User
+  reportedBy     User                @relation("ReportedByUser", fields: [reportedById], references: [id])
+
+  // MatchReport ↔ EventRoleAssignment
+  reviewedByRole EventRoleAssignment? @relation("ReviewedByRole", fields: [reviewedByRoleId], references: [id])
 }
