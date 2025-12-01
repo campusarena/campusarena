@@ -1,10 +1,14 @@
 // prisma/seed.ts
 import { PrismaClient, Role, EventFormat, EventRole } from '@prisma/client';
+import { hash } from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding CampusArena test data...');
+
+  // One shared hash for all test users
+  const passwordHash = await hash('password123', 10);
 
   // 1. Create some users
   const adminUser = await prisma.user.upsert({
@@ -12,7 +16,7 @@ async function main() {
     update: {},
     create: {
       email: 'admin@campusarena.test',
-      password: 'password123', // TODO: hash in a real app
+      password: passwordHash, // hashed!
       role: Role.ADMIN,
     },
   });
@@ -22,7 +26,7 @@ async function main() {
     update: {},
     create: {
       email: 'organizer@campusarena.test',
-      password: 'password123',
+      password: passwordHash,
       role: Role.USER,
     },
   });
@@ -32,7 +36,7 @@ async function main() {
     update: {},
     create: {
       email: 'player1@campusarena.test',
-      password: 'password123',
+      password: passwordHash,
       role: Role.USER,
     },
   });
@@ -42,7 +46,7 @@ async function main() {
     update: {},
     create: {
       email: 'player2@campusarena.test',
-      password: 'password123',
+      password: passwordHash,
       role: Role.USER,
     },
   });
@@ -52,7 +56,7 @@ async function main() {
     update: {},
     create: {
       email: 'player3@campusarena.test',
-      password: 'password123',
+      password: passwordHash,
       role: Role.USER,
     },
   });
@@ -62,7 +66,7 @@ async function main() {
     update: {},
     create: {
       email: 'player4@campusarena.test',
-      password: 'password123',
+      password: passwordHash,
       role: Role.USER,
     },
   });
@@ -148,11 +152,11 @@ async function main() {
     }),
   ]);
 
-  // Just to make things readable:
   const [p1, p2, p3, p4] = participants;
 
   // 5. Create a 4-player single-elim bracket
-  // Round 2: final match (we create this first so semis can point to it)
+
+  // Round 2: finals
   const finalMatch = await prisma.match.create({
     data: {
       tournamentId: tournament.id,
@@ -163,7 +167,7 @@ async function main() {
     },
   });
 
-  // Round 1: two semi-final matches feeding into the final
+  // Round 1: semis feeding into the final
   const semi1 = await prisma.match.create({
     data: {
       tournamentId: tournament.id,
