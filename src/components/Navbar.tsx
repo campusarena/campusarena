@@ -11,7 +11,10 @@ export default function NavBar() {
   return (
     <Navbar expand="lg" className="ca-glass-nav">
       <Container>
-        <Link href="/" className="navbar-brand fw-bold text-white text-decoration-none">
+        <Link
+          href="/"
+          className="navbar-brand fw-bold text-white text-decoration-none"
+        >
           CampusArena
         </Link>
 
@@ -19,6 +22,7 @@ export default function NavBar() {
         <Navbar.Collapse id="nav" className="justify-content-end">
           {/* ---------- LEFT NAV LINKS ---------- */}
           <Nav className="me-auto">
+            {/* Public links */}
             <Link href="/events" className="nav-link ca-nav-link">
               Events
             </Link>
@@ -42,16 +46,24 @@ export default function NavBar() {
             </Link>
           </Nav>
 
-          {/* ---------- AUTH CONTROLS ---------- */}
+          {/* ---------- AUTH CONTROLS (RIGHT SIDE) ---------- */}
           {!session && (
             <Nav className="d-flex align-items-center gap-2">
               <Link href="/auth/signin">
-                <Button variant="outline-light" size="sm" className="ca-glass-button">
+                <Button
+                  variant="outline-light"
+                  size="sm"
+                  className="ca-glass-button"
+                >
                   Sign in
                 </Button>
               </Link>
               <Link href="/auth/signup">
-                <Button variant="light" size="sm" className="ca-solid-button">
+                <Button
+                  variant="light"
+                  size="sm"
+                  className="ca-solid-button"
+                >
                   Sign up
                 </Button>
               </Link>
@@ -69,9 +81,10 @@ export default function NavBar() {
                 <NavDropdown.Item as={Link} href="/auth/change-password">
                   Change Password
                 </NavDropdown.Item>
-
                 <NavDropdown.Item
-                  onClick={() => signOut({ callbackUrl: "/", redirect: true })}
+                  onClick={() =>
+                    signOut({ callbackUrl: "/", redirect: true })
+                  }
                   className="text-danger"
                 >
                   Sign Out
