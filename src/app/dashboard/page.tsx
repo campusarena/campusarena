@@ -1,6 +1,11 @@
-import DashboardClient from '@/components/dashboard/DashboardClient';
+// src/app/dashboard/page.tsx
 
-export default function DashboardPage() {
-  // Server component wrapper – later this will load real data
-  return <DashboardClient />;
+import DashboardClient from '@/components/dashboard/DashboardClient';
+import { getDashboardDataForUser } from '@/lib/dashboardService';
+
+export default async function DashboardPage() {
+  // Later we'll pass the real user id (from session).
+  const data = await getDashboardDataForUser(null);
+
+  return <DashboardClient data={data} />;
 }

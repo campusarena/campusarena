@@ -7,7 +7,15 @@ import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Link from 'next/link';
 
-export default function DashboardClient() {
+import type { DashboardData } from '@/lib/dashboardService';
+
+type DashboardClientProps = {
+  data: DashboardData;
+};
+
+export default function DashboardClient({ data }: DashboardClientProps) {
+  const { activeEvents, upcomingMatches, nextMatches, recentResults } = data;
+
   return (
     <section className="ca-section">
       <Container id="dashboard-page">
@@ -31,7 +39,6 @@ export default function DashboardClient() {
         {/* Main dashboard card */}
         <Row className="justify-content-center">
           <Col md={10} lg={8}>
-            {/* Use the same style as the hero preview card */}
             <Card className="ca-hero-card">
               <Card.Body>
                 {/* Top row: Active Events + Upcoming Matches */}
@@ -40,44 +47,29 @@ export default function DashboardClient() {
                   <Col md={6} className="mb-4 mb-md-0">
                     <h2 className="h5 mb-3 text-white">Active Events</h2>
 
-                    <Card className="ca-event-card mb-2">
-                      <Card.Body>
-                        <div className="fw-semibold text-white">
-                          Spring Basketball League
-                        </div>
-                        <div className="text-secondary small">League</div>
-                      </Card.Body>
-                    </Card>
-
-                    <Card className="ca-event-card">
-                      <Card.Body>
-                        <div className="fw-semibold text-white">
-                          Open Smash Tournament
-                        </div>
-                        <div className="text-secondary small">Tournament</div>
-                      </Card.Body>
-                    </Card>
+                    {activeEvents.map((ev) => (
+                      <Card key={ev.id} className="ca-event-card mb-2">
+                        <Card.Body>
+                          <div className="fw-semibold text-white">{ev.name}</div>
+                          <div className="text-secondary small">{ev.kind}</div>
+                        </Card.Body>
+                      </Card>
+                    ))}
                   </Col>
 
                   {/* Upcoming Matches (top right) */}
                   <Col md={6}>
                     <h2 className="h5 mb-3 text-white">Upcoming Matches</h2>
 
-                    <div className="mb-3">
-                      <div className="fw-semibold text-white">Monday Night Soccer</div>
-                      <div className="text-secondary small">April 29</div>
-                      <div className="text-secondary small">Tigers vs Wildcats</div>
-                    </div>
-
-                    <div>
-                      <div className="fw-semibold text-white">
-                        Collegiate Dota 2 Championship
+                    {upcomingMatches.map((m) => (
+                      <div key={m.id} className="mb-3">
+                        <div className="fw-semibold text-white">{m.name}</div>
+                        <div className="text-secondary small">{m.date}</div>
+                        {m.description && (
+                          <div className="text-secondary small">{m.description}</div>
+                        )}
                       </div>
-                      <div className="text-secondary small">May 1</div>
-                      <div className="text-secondary small">
-                        Alpha Team vs Group B
-                      </div>
-                    </div>
+                    ))}
                   </Col>
                 </Row>
 
@@ -87,33 +79,24 @@ export default function DashboardClient() {
                   <Col md={6} className="mb-4 mb-md-0">
                     <h3 className="h6 mb-3 text-white">My Next Matches</h3>
 
-                    <div>
-                      <div className="fw-semibold text-white">Monday Night Soccer</div>
-                      <div className="text-secondary small">April 29</div>
-                    </div>
+                    {nextMatches.map((m) => (
+                      <div key={m.id}>
+                        <div className="fw-semibold text-white">{m.name}</div>
+                        <div className="text-secondary small">{m.date}</div>
+                      </div>
+                    ))}
                   </Col>
 
                   {/* Recent Results (bottom right) */}
                   <Col md={6}>
                     <h3 className="h6 mb-3 text-white">Recent Results</h3>
 
-                    <div className="mb-2">
-                      <div className="fw-semibold text-white">
-                        Basketball Team A vs Basketball Team D
+                    {recentResults.map((r) => (
+                      <div key={r.id} className="mb-2">
+                        <div className="fw-semibold text-white">{r.name}</div>
+                        <div className="text-secondary small">{r.description}</div>
                       </div>
-                      <div className="text-secondary small">
-                        Player 1 vs Player 3
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="fw-semibold text-white">
-                        Spring League Finals
-                      </div>
-                      <div className="text-secondary small">
-                        Alpha Squad vs Night Owls
-                      </div>
-                    </div>
+                    ))}
                   </Col>
                 </Row>
               </Card.Body>
