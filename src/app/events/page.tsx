@@ -1,11 +1,21 @@
-import CreateEventForm from '@/components/CreateEventForm';
+'use client';
 
-const Events = () => {
+import Container from 'react-bootstrap/Container';
+
+export default function EventsPage() {
   return (
-    <main>
-      <CreateEventForm />
-    </main>
-  );
-};
+    <section className="ca-section">
+      <Container>
+        <h1 className="fw-bold text-white mb-3">Browse Events</h1>
+        <p className="ca-section-subtitle">
+          View public tournaments, leagues, and upcoming competitions.
+        </p>
 
-export default Events;
+        {/* TODO: Replace with real event cards when Prisma data is ready */}
+        <div className="text-secondary mt-4">
+          No events available yet.
+        </div>
+      </Container>
+    </section>
+  );
+}
