@@ -7,6 +7,15 @@ import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Link from 'next/link';
 
+import DashboardSection from '@/components/dashboard/DashboardSection';
+import DashboardEventCard from '@/components/dashboard/DashboardEventCard';
+import {
+  activeEvents,
+  upcomingMatches,
+  myNextMatches,
+  recentResults,
+} from '@/data/dashboardData';
+
 export default function DashboardPage() {
   return (
     <section className="ca-section">
@@ -20,7 +29,7 @@ export default function DashboardPage() {
             </p>
 
             {/* Create Event goes to /create-event */}
-            <Link href="/create-event">
+            <Link href="/event">
               <Button size="lg" className="ca-cta-primary mt-3">
                 Create New Event
               </Button>
@@ -31,89 +40,75 @@ export default function DashboardPage() {
         {/* Main dashboard card */}
         <Row className="justify-content-center">
           <Col md={10} lg={8}>
-            {/* Use the same style as the hero preview card */}
             <Card className="ca-hero-card">
               <Card.Body>
                 {/* Top row: Active Events + Upcoming Matches */}
                 <Row className="mb-4">
-                  {/* Active Events (top left) */}
+                  {/* Active Events */}
                   <Col md={6} className="mb-4 mb-md-0">
-                    <h2 className="h5 mb-3 text-white">Active Events</h2>
-
-                    <Card className="ca-event-card mb-2">
-                      <Card.Body>
-                        <div className="fw-semibold text-white">
-                          Spring Basketball League
-                        </div>
-                        <div className="text-secondary small">League</div>
-                      </Card.Body>
-                    </Card>
-
-                    <Card className="ca-event-card">
-                      <Card.Body>
-                        <div className="fw-semibold text-white">
-                          Open Smash Tournament
-                        </div>
-                        <div className="text-secondary small">Tournament</div>
-                      </Card.Body>
-                    </Card>
+                    <DashboardSection title="Active Events">
+                      {activeEvents.map((event) => (
+                        <DashboardEventCard
+                          key={event.id}
+                          title={event.name}
+                          subtitle={event.type}
+                        />
+                      ))}
+                    </DashboardSection>
                   </Col>
 
-                  {/* Upcoming Matches (top right) */}
+                  {/* Upcoming Matches */}
                   <Col md={6}>
-                    <h2 className="h5 mb-3 text-white">Upcoming Matches</h2>
-
-                    <div className="mb-3">
-                      <div className="fw-semibold text-white">Monday Night Soccer</div>
-                      <div className="text-secondary small">April 29</div>
-                      <div className="text-secondary small">Tigers vs Wildcats</div>
-                    </div>
-
-                    <div>
-                      <div className="fw-semibold text-white">
-                        Collegiate Dota 2 Championship
-                      </div>
-                      <div className="text-secondary small">May 1</div>
-                      <div className="text-secondary small">
-                        Alpha Team vs Group B
-                      </div>
-                    </div>
+                    <DashboardSection title="Upcoming Matches">
+                      {upcomingMatches.map((match) => (
+                        <div key={match.id} className="mb-3">
+                          <div className="fw-semibold text-white">
+                            {match.title}
+                          </div>
+                          <div className="text-secondary small">
+                            {match.date}
+                          </div>
+                          <div className="text-secondary small">
+                            {match.extra}
+                          </div>
+                        </div>
+                      ))}
+                    </DashboardSection>
                   </Col>
                 </Row>
 
                 {/* Bottom row: My Next Matches + Recent Results */}
                 <Row>
-                  {/* My Next Matches (bottom left) */}
+                  {/* My Next Matches */}
                   <Col md={6} className="mb-4 mb-md-0">
-                    <h3 className="h6 mb-3 text-white">My Next Matches</h3>
-
-                    <div>
-                      <div className="fw-semibold text-white">Monday Night Soccer</div>
-                      <div className="text-secondary small">April 29</div>
-                    </div>
+                    <DashboardSection title="My Next Matches" size="sm">
+                      {myNextMatches.map((item) => (
+                        <div key={item.id}>
+                          <div className="fw-semibold text-white">
+                            {item.title}
+                          </div>
+                          <div className="text-secondary small">
+                            {item.extra}
+                          </div>
+                        </div>
+                      ))}
+                    </DashboardSection>
                   </Col>
 
-                  {/* Recent Results (bottom right) */}
+                  {/* Recent Results */}
                   <Col md={6}>
-                    <h3 className="h6 mb-3 text-white">Recent Results</h3>
-
-                    <div className="mb-2">
-                      <div className="fw-semibold text-white">
-                        Basketball Team A vs Basketball Team D
-                      </div>
-                      <div className="text-secondary small">
-                        Player 1 vs Player 3
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="fw-semibold text-white">
-                        Spring League Finals
-                      </div>
-                      <div className="text-secondary small">
-                        Alpha Squad vs Night Owls
-                      </div>
-                    </div>
+                    <DashboardSection title="Recent Results" size="sm">
+                      {recentResults.map((item) => (
+                        <div key={item.id} className="mb-2">
+                          <div className="fw-semibold text-white">
+                            {item.title}
+                          </div>
+                          <div className="text-secondary small">
+                            {item.extra}
+                          </div>
+                        </div>
+                      ))}
+                    </DashboardSection>
                   </Col>
                 </Row>
               </Card.Body>
