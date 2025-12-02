@@ -30,7 +30,7 @@ export type DashboardData = {
 
 // Mock "service" – later can be replaced with Prisma.
 export async function getDashboardDataForUser(
-  userId: string | null
+  //userId: string | null  <- Dont know what this does
 ): Promise<DashboardData> {
   // For now we ignore userId and return static mock data.
   return {
