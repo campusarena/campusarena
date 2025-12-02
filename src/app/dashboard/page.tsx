@@ -5,7 +5,7 @@ import { getDashboardDataForUser } from '@/lib/dashboardService';
 
 export default async function DashboardPage() {
   // Later we'll pass the real user id (from session).
-  const data = await getDashboardDataForUser(null);
+  const data = await getDashboardDataForUser();
 
   return <DashboardClient data={data} />;
 }
