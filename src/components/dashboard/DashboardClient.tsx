@@ -7,7 +7,7 @@ import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Link from 'next/link';
 
-import type { DashboardData } from '@/lib/dashboardService';
+import type { DashboardData } from '@/types/dashboard'; 
 
 type DashboardClientProps = {
   data: DashboardData;
