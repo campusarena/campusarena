@@ -361,11 +361,19 @@
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-/* Subtle zebra stripes + hover state */
-.ca-standings-table tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.02);
+/* Force dark table styling ONLY inside the standings card */
+.ca-standings-table table.table > :not(caption) > * > * {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  color: #f9fafb !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-.ca-standings-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.04);
+/* Zebra stripes */
+.ca-standings-table table.table > tbody > tr:nth-child(even) > * {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Hover highlight */
+.ca-standings-table table.table > tbody > tr:hover > * {
+  background-color: rgba(255, 255, 255, 0.12) !important;
 }
