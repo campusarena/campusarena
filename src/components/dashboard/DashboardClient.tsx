@@ -28,7 +28,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
             </p>
 
             {/* Create Event goes to /event (CreateEventForm) */}
-            <Link href="/event">
+            <Link href="/createevent">
               <Button size="lg" className="ca-cta-primary mt-3">
                 Create New Event
               </Button>
