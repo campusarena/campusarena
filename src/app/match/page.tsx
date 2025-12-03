@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Form, Button } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, Badge } from 'react-bootstrap';
 import { useSession } from 'next-auth/react';
 import './match.css';
 
@@ -22,6 +22,10 @@ export default function MatchPage() {
   const [team2Name, setTeam2Name] = useState('Team Beta');
   const [team1Score, setTeam1Score] = useState(1);
   const [team2Score, setTeam2Score] = useState(1);
+  const [gameName] = useState('Super Smash Bros.');
+  const [matchDate] = useState('2024-04-24');
+  const [matchTime] = useState('14:00');
+  const [isVerified, setIsVerified] = useState(false);
   
   const [pendingMatches, setPendingMatches] = useState<PendingMatch[]>([]);
 
@@ -74,16 +78,30 @@ export default function MatchPage() {
     };
 
     setPendingMatches(prev => [...prev, newMatch]);
+    setIsVerified(true); // Lock the form
     alert('Match submitted for admin approval!');
   };
 
   return (
     <main style={{ flex: 1, backgroundColor: '#2c2c2c' }}>
       <Container fluid className="match-page py-5">
-      <Row>
+      <Row className="justify-content-center">
         {/* Match Input */}
-        <Col lg={12} className="mb-4">
-          <h1 className="mb-5">Match</h1>
+        <Col lg={8} xl={6} className="mb-4">
+          <div className="breadcrumb-text mb-3">
+            Tournaments / {gameName}
+          </div>
+          
+          <h1 className="mb-5">Report Match Result</h1>
+
+          {/* Match Status Badge */}
+          {isVerified && (
+            <div className="mb-3">
+              <Badge bg="success" style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}>
+                ✓ Match Locked & Submitted for Verification
+              </Badge>
+            </div>
+          )}
 
           {/* VS Section */}
           <div className="match-vs-section mb-5">
@@ -95,6 +113,7 @@ export default function MatchPage() {
                     value={team1Name}
                     onChange={(e) => setTeam1Name(e.target.value)}
                     placeholder="Team 1 Name"
+                    disabled={isVerified}
                     style={{ 
                       backgroundColor: '#0d0e13', 
                       border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -111,6 +130,7 @@ export default function MatchPage() {
                     min="0"
                     value={team1Score}
                     onChange={(e) => setTeam1Score(parseInt(e.target.value) || 0)}
+                    disabled={isVerified}
                     style={{ 
                       backgroundColor: '#0d0e13', 
                       border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -132,6 +152,7 @@ export default function MatchPage() {
                     value={team2Name}
                     onChange={(e) => setTeam2Name(e.target.value)}
                     placeholder="Team 2 Name"
+                    disabled={isVerified}
                     style={{ 
                       backgroundColor: '#0d0e13', 
                       border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -148,6 +169,7 @@ export default function MatchPage() {
                     min="0"
                     value={team2Score}
                     onChange={(e) => setTeam2Score(parseInt(e.target.value) || 0)}
+                    disabled={isVerified}
                     style={{ 
                       backgroundColor: '#0d0e13', 
                       border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -165,9 +187,32 @@ export default function MatchPage() {
               className="report-score-btn mt-4" 
               size="lg"
               onClick={handleSubmitMatch}
+              disabled={isVerified}
             >
-              SUBMIT MATCH
+              {isVerified ? 'MATCH LOCKED' : 'SUBMIT MATCH'}
             </Button>
+          </div>
+
+          {/* Match Details Display */}
+          <div className="match-details-card">
+            <h4 className="mb-3">MATCH DETAILS</h4>
+            <div className="detail-row">
+              <span className="detail-label">Game</span>
+              <span className="detail-value">{gameName}</span>
+            </div>
+            <div className="detail-row">
+              <span className="detail-label">Date & Time</span>
+              <span className="detail-value">
+                {new Date(matchDate + 'T' + matchTime).toLocaleString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                })}
+              </span>
+            </div>
           </div>
         </Col>
       </Row>
