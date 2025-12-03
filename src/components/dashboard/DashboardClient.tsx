@@ -7,14 +7,14 @@ import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
 import Link from 'next/link';
 
-import type { DashboardData } from '@/types/dashboard'; 
+import type { DashboardData } from '@/types/dashboard';
 
 type DashboardClientProps = {
   data: DashboardData;
 };
 
 export default function DashboardClient({ data }: DashboardClientProps) {
-  const { activeEvents, upcomingMatches, nextMatches, recentResults } = data;
+  const { activeEvents, upcomingMatches, recentResults } = data;
 
   return (
     <section className="ca-section">
@@ -73,22 +73,9 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                   </Col>
                 </Row>
 
-                {/* Bottom row: My Next Matches + Recent Results */}
+                {/* Full-width Recent Results (My Next Matches removed) */}
                 <Row>
-                  {/* My Next Matches (bottom left) */}
-                  <Col md={6} className="mb-4 mb-md-0">
-                    <h3 className="h6 mb-3 text-white">My Next Matches</h3>
-
-                    {nextMatches.map((m) => (
-                      <div key={m.id}>
-                        <div className="fw-semibold text-white">{m.name}</div>
-                        <div className="text-secondary small">{m.date}</div>
-                      </div>
-                    ))}
-                  </Col>
-
-                  {/* Recent Results (bottom right) */}
-                  <Col md={6}>
+                  <Col>
                     <h3 className="h6 mb-3 text-white">Recent Results</h3>
 
                     {recentResults.map((r) => (
