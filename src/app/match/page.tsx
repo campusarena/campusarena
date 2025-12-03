@@ -1,15 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Container, Row, Col, Table, Form, Button, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button } from 'react-bootstrap';
 import { useSession } from 'next-auth/react';
 import './match.css';
-
-interface TeamData {
-  name: string;
-  wins: number;
-  losses: number;
-}
 
 interface PendingMatch {
   id: string;
