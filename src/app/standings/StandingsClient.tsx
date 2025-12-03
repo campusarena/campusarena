@@ -27,6 +27,16 @@ export default function StandingsClient({ tournaments }: StandingsClientProps) {
   return (
     <section className="ca-standings-page">
       <Container>
+        {/* Return to Dashboard */}
+        <div className="mb-4">
+          <Link
+            href="/"
+            className="btn btn-sm btn-outline-light ca-glass-button"
+          >
+            ← Back to dashboard
+          </Link>
+        </div>
+
         {/* Page header */}
         <Row className="mb-5 text-center">
           <Col>
@@ -38,10 +48,19 @@ export default function StandingsClient({ tournaments }: StandingsClientProps) {
         </Row>
 
         {/* League cards */}
-        <Row xs={1} md={2} className="g-4">
+        <Row
+          xs={1}
+          md={2}
+          className="g-4 justify-content-center"
+        >
           {tournaments.map((tournament) => (
-            <Col key={tournament.id}>
-              <Card className="ca-feature-card h-100">
+            <Col
+              key={tournament.id}
+              md={10}
+              lg={8}
+              className="d-flex justify-content-center"
+            >
+              <Card className="ca-feature-card w-100 h-100">
                 <Card.Body>
                   {/* Header */}
                   <div className="d-flex justify-content-between align-items-start mb-3">
@@ -57,7 +76,7 @@ export default function StandingsClient({ tournaments }: StandingsClientProps) {
                   </div>
 
                   {/* Standings table */}
-                  <div className="ca-standings-table mt-3">
+                  <div className="ca-standings-table ca mt-3">
                     <table className="table table-sm mb-0">
                       <thead>
                         <tr>
