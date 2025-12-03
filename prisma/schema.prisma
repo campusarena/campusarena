@@ -45,87 +45,91 @@ model User {
   participants     Participant[]
   teamMemberships  TeamMember[]
   eventRoles       EventRoleAssignment[]
-  submittedReports MatchReport[] @relation("ReportedByUser")
+  submittedReports MatchReport[]         @relation("ReportedByUser")
+
+  invitationsSent     Invitation[] @relation("InvitationsSent")
+  invitationsReceived Invitation[] @relation("InvitationsReceived")
 }
 
 model Tournament {
-  id              Int          @id @default(autoincrement())
-  name            String
-  game            String
-  format          EventFormat  @default(SINGLE_ELIM)
-  isTeamBased     Boolean      @default(true)  // true = team events, false = individual
+  id          Int         @id @default(autoincrement())
+  name        String
+  game        String
+  format      EventFormat @default(SINGLE_ELIM)
+  isTeamBased Boolean     @default(true) // true = team events, false = individual
 
-  startDate       DateTime
-  endDate         DateTime?
-  status          String       @default("upcoming") // upcoming, ongoing, completed
+  startDate DateTime
+  endDate   DateTime?
+  status    String    @default("upcoming") // upcoming, ongoing, completed
 
   maxParticipants Int?
-  location        String?      // free-form location text
+  location        String? // free-form location text
 
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  matches         Match[]
-  teams           Team[]
-  participants    Participant[]
-  staff           EventRoleAssignment[]
+  matches      Match[]
+  teams        Team[]
+  participants Participant[]
+  staff        EventRoleAssignment[]
+  invitations  Invitation[]
 }
 
 model Team {
-  id           Int          @id @default(autoincrement())
+  id           Int     @id @default(autoincrement())
   tournamentId Int
   name         String
   tag          String?
 
-  tournament   Tournament   @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   members      TeamMember[]
   participants Participant[]
 
-  createdAt    DateTime     @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([tournamentId, name])
 }
 
 model TeamMember {
-  id        Int    @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   teamId    Int
   userId    Int
   isCaptain Boolean @default(false)
 
-  team      Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user      User   @relation(fields: [userId], references: [id])
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
 
   @@unique([teamId, userId])
 }
 
 model Participant {
-  id           Int        @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   tournamentId Int
-  userId       Int?       // filled for individual events
-  teamId       Int?       // filled for team events
+  userId       Int? // filled for individual events
+  teamId       Int? // filled for team events
   seed         Int?
-  joinedAt     DateTime   @default(now())
+  joinedAt     DateTime @default(now())
 
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  user         User?      @relation(fields: [userId], references: [id])
-  team         Team?      @relation(fields: [teamId], references: [id])
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User?      @relation(fields: [userId], references: [id])
+  team       Team?      @relation(fields: [teamId], references: [id])
 
-  matchesAsP1  Match[]    @relation("MatchP1")
-  matchesAsP2  Match[]    @relation("MatchP2")
-  matchesWon   Match[]    @relation("MatchWinner")
+  matchesAsP1 Match[] @relation("MatchP1")
+  matchesAsP2 Match[] @relation("MatchP2")
+  matchesWon  Match[] @relation("MatchWinner")
+  // App invariant: exactly one of userId or teamId is non-null.
 
   @@index([tournamentId])
-  // App invariant: exactly one of userId or teamId is non-null.
 }
 
 model EventRoleAssignment {
-  id           Int        @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   tournamentId Int
   userId       Int
   role         EventRole
 
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id])
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id])
 
   reviewedReports MatchReport[] @relation("ReviewedByRole")
 
@@ -133,63 +137,89 @@ model EventRoleAssignment {
 }
 
 model Match {
-  id           Int         @id @default(autoincrement())
+  id           Int        @id @default(autoincrement())
   tournamentId Int
-  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
 
   // Bracket position
-  roundNumber  Int?        // 1 = first round, 2 = second round, etc.
-  slotIndex    Int?        // position within that round
+  roundNumber Int? // 1 = first round, 2 = second round, etc.
+  slotIndex   Int? // position within that round
 
   // Participants (teams or individuals via Participant)
-  p1Id         Int?
-  p2Id         Int?
-  winnerId     Int?
+  p1Id     Int?
+  p2Id     Int?
+  winnerId Int?
 
-  p1           Participant? @relation("MatchP1", fields: [p1Id], references: [id])
-  p2           Participant? @relation("MatchP2", fields: [p2Id], references: [id])
-  winner       Participant? @relation("MatchWinner", fields: [winnerId], references: [id])
+  p1     Participant? @relation("MatchP1", fields: [p1Id], references: [id])
+  p2     Participant? @relation("MatchP2", fields: [p2Id], references: [id])
+  winner Participant? @relation("MatchWinner", fields: [winnerId], references: [id])
 
-  p1Score      Int?
-  p2Score      Int?
+  p1Score Int?
+  p2Score Int?
 
-  scheduledAt  DateTime?
-  completedAt  DateTime?
-  location     String?      // free-form location text
+  scheduledAt DateTime?
+  completedAt DateTime?
+  location    String? // free-form location text
 
-  status       MatchStatus  @default(PENDING)
+  status MatchStatus @default(PENDING)
 
   // Optional: bracket wiring for single elim
-  nextMatchId  Int?
-  nextMatch    Match?       @relation("MatchNext", fields: [nextMatchId], references: [id])
-  children     Match[]      @relation("MatchNext")
+  nextMatchId Int?
+  nextMatch   Match?  @relation("MatchNext", fields: [nextMatchId], references: [id])
+  children    Match[] @relation("MatchNext")
 
-  createdAt    DateTime     @default(now())
+  createdAt DateTime @default(now())
 
-  reports      MatchReport[]
+  reports MatchReport[]
 
   @@index([tournamentId, roundNumber])
   @@index([tournamentId, status])
 }
 
 model MatchReport {
-  id                   Int          @id @default(autoincrement())
-  matchId              Int
-  reportedById         Int          // user who submitted the result
-  p1Score              Int
-  p2Score              Int
-  winnerParticipantId  Int
-  status               ReportStatus @default(PENDING)
+  id                  Int          @id @default(autoincrement())
+  matchId             Int
+  reportedById        Int // user who submitted the result
+  p1Score             Int
+  p2Score             Int
+  winnerParticipantId Int
+  status              ReportStatus @default(PENDING)
 
-  createdAt            DateTime     @default(now())
-  reviewedAt           DateTime?
-  reviewedByRoleId     Int?         // an EventRoleAssignment row
+  createdAt        DateTime  @default(now())
+  reviewedAt       DateTime?
+  reviewedByRoleId Int? // an EventRoleAssignment row
 
-  match          Match               @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
   // MatchReport ↔ User
-  reportedBy     User                @relation("ReportedByUser", fields: [reportedById], references: [id])
+  reportedBy User @relation("ReportedByUser", fields: [reportedById], references: [id])
 
   // MatchReport ↔ EventRoleAssignment
   reviewedByRole EventRoleAssignment? @relation("ReviewedByRole", fields: [reviewedByRoleId], references: [id])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model Invitation {
+  id            Int    @id @default(autoincrement())
+  tournamentId  Int
+  invitedById   Int // organizer/owner who sent it
+  invitedUserId Int? // if user exists
+  invitedEmail  String // stored even when user does not exist yet
+
+  token  String           @unique
+  status InvitationStatus @default(PENDING)
+
+  createdAt   DateTime  @default(now())
+  respondedAt DateTime?
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  invitedBy   User  @relation("InvitationsSent", fields: [invitedById], references: [id])
+  invitedUser User? @relation("InvitationsReceived", fields: [invitedUserId], references: [id])
 }
