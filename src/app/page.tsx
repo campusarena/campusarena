@@ -1,8 +1,10 @@
 "use client";
 import { Container, Row, Col, Card, Badge, Button } from "react-bootstrap";
 import { Controller, Trophy, People, Film } from "react-bootstrap-icons";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
   const upcomingEvents = [
     {
       title: "Team Soccer Nights",
@@ -68,10 +70,10 @@ export default function Home() {
                 and esports — with brackets, standings, and match pages in one place.
               </p>
               <div className="d-flex flex-wrap gap-3 mt-4">
-                <Button size="lg" className="ca-cta-primary">
+                <Button size="lg" className="ca-cta-primary" onClick={() => router.push('/createevent')}>
                   Create an event
                 </Button>
-                <Button size="lg" variant="outline-light" className="ca-cta-secondary">
+                <Button size="lg" variant="outline-light" className="ca-cta-secondary" onClick={() => router.push('/events')}>
                   Browse public events
                 </Button>
               </div>
