@@ -30,7 +30,7 @@ export default function StandingsClient({ tournaments }: StandingsClientProps) {
         {/* Return to Dashboard */}
         <div className="mb-4">
           <Link
-            href="/"
+            href="/dashboard"
             className="btn btn-sm btn-outline-light ca-glass-button"
           >
             ← Back to dashboard
