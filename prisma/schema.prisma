@@ -51,19 +51,27 @@ model User {
   invitationsReceived Invitation[] @relation("InvitationsReceived")
 }
 
+enum TournamentVisibility {
+  PUBLIC // anyone can view + request to join
+  PRIVATE // only invited/participants/staff can view
+}
+
 model Tournament {
   id          Int         @id @default(autoincrement())
   name        String
   game        String
   format      EventFormat @default(SINGLE_ELIM)
-  isTeamBased Boolean     @default(true) // true = team events, false = individual
+  isTeamBased Boolean     @default(true)
 
   startDate DateTime
   endDate   DateTime?
-  status    String    @default("upcoming") // upcoming, ongoing, completed
+  status    String    @default("upcoming")
 
   maxParticipants Int?
-  location        String? // free-form location text
+  location        String?
+
+  // NEW:
+  visibility TournamentVisibility @default(PRIVATE)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -72,7 +80,7 @@ model Tournament {
   teams        Team[]
   participants Participant[]
   staff        EventRoleAssignment[]
-  invitations  Invitation[]
+  Invitation   Invitation[]
 }
 
 model Team {
