@@ -98,32 +98,32 @@ export default function PublicEventsClient({ events }: Props) {
                 <Card className="ca-event-card h-100 text-white">
                     <Card.Body>
                         <div className="d-flex justify-content-between align-items-start mb-2">
-                        <Card.Title className="text-white mb-0">
-                            {ev.name}
-                        </Card.Title>
-                        <Badge bg="secondary" className="ca-event-tag text-uppercase">
-                            {ev.format === 'SINGLE_ELIM' ? 'Single Elim' : ev.format}
-                        </Badge>
+                            <Card.Title className="text-white mb-0">
+                                {ev.name}
+                            </Card.Title>
+                            <Badge bg="secondary" className="ca-event-tag text-uppercase">
+                                {ev.format === 'SINGLE_ELIM' ? 'Single Elim' : ev.format}
+                            </Badge>
                         </div>
 
                         <div className="text-light small mb-1">
-                        {ev.game} · {ev.isTeamBased ? 'Teams' : 'Solo'}
-                        </div>
+                            {ev.game} · {ev.isTeamBased ? 'Teams' : 'Solo'}
+                           </div>
 
                         <div className="text-light small mb-1">
-                        {dateLabel}
-                        {ev.location ? ` · ${ev.location}` : ''}
+                            {dateLabel}
+                            {ev.location ? ` · ${ev.location}` : ''}
                         </div>
 
                         <div className="text-light small mb-3">
-                        Capacity: {capacityLabel}
-                        {isFull && <span> · Full</span>}
+                            Capacity: {capacityLabel}
+                            {isFull && <span> · Full</span>}
                         </div>
 
                         <Link href={`/events/${ev.id}`} className="text-decoration-none">
-                        <button className="btn btn-primary btn-sm w-100">
-                            View Details
-                        </button>
+                            <button className="btn btn-primary btn-sm w-100">
+                                View Details
+                            </button>
                         </Link>
                     </Card.Body>
                 </Card>
