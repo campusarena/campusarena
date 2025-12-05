@@ -36,6 +36,12 @@ export async function createTournamentAction(formData: FormData) {
     ? new Date(String(startDateRaw))
     : new Date();
 
+  const visibilityRaw = formData.get('visibility') as string | null;
+  const visibility =
+    visibilityRaw === 'PRIVATE'
+      ? visibilityRaw
+      : 'PUBLIC';
+
   if (!name || !game) {
     throw new Error('Event name and game are required.');
   }
@@ -50,6 +56,7 @@ export async function createTournamentAction(formData: FormData) {
       status: 'upcoming',
       maxParticipants,
       location: location || null,
+      visibility,
     },
   });
 

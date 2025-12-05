@@ -93,6 +93,7 @@ async function main() {
       status: 'upcoming',
       maxParticipants: 16,
       location: 'UH Mānoa Campus - Campus Center',
+      visibility: 'PUBLIC', // example
     },
   });
 
@@ -223,6 +224,7 @@ async function main() {
       status: 'completed',
       maxParticipants: 16,
       location: 'UH Mānoa Campus - Ballroom',
+      visibility: 'PUBLIC', // example
     },
   });
 

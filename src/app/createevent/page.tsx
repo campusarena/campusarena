@@ -104,6 +104,14 @@ export default function CreateEventPage() {
                     />
                   </Form.Group>
 
+                  <Form.Group className="mb-3">
+                    <Form.Label>Visibility</Form.Label>
+                    <Form.Select name="visibility" defaultValue="PUBLIC" className="ca-auth-input">
+                      <option value="PUBLIC">Public (anyone can view & request to join)</option>
+                      <option value="PRIVATE">Private (only invited players)</option>
+                    </Form.Select>
+                  </Form.Group>
+
                   <Button
                     type="submit"
                     className="ca-auth-button"
