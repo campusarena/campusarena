@@ -19,7 +19,6 @@ export default function DashboardClient({ data }: DashboardClientProps) {
   return (
     <section className="ca-section">
       <Container id="dashboard-page">
-        
         {/* ---------- HEADER & ACTION BUTTONS ---------- */}
         <Row className="mb-4 text-center">
           <Col>
@@ -28,9 +27,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
               See your active leagues, upcoming matches, and recent results in one place.
             </p>
 
-            {/* Main action buttons */}
             <div className="mt-4 d-flex flex-wrap justify-content-center gap-3">
-
               {/* Create Event */}
               <Link href="/createevent">
                 <Button size="lg" className="ca-cta-primary">
@@ -38,8 +35,8 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                 </Button>
               </Link>
 
-              {/* View Matches */}
-              <Link href="/match">
+              {/* Optional generic matches page (can remove if you don't have it yet) */}
+              <Link href="/matches">
                 <Button
                   size="lg"
                   variant="outline-light"
@@ -59,7 +56,6 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                   Standings
                 </Button>
               </Link>
-
             </div>
           </Col>
         </Row>
@@ -69,10 +65,8 @@ export default function DashboardClient({ data }: DashboardClientProps) {
           <Col md={10} lg={8}>
             <Card className="ca-hero-card">
               <Card.Body>
-
                 {/* ----- TOP ROW: ACTIVE EVENTS + UPCOMING MATCHES ----- */}
                 <Row className="mb-4">
-
                   {/* Active Events */}
                   <Col md={6} className="mb-4 mb-md-0">
                     <h2 className="h5 mb-3 text-white">Active Events</h2>
@@ -85,6 +79,12 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                         </Card.Body>
                       </Card>
                     ))}
+
+                    {activeEvents.length === 0 && (
+                      <div className="text-secondary small">
+                        You are not registered in any events yet.
+                      </div>
+                    )}
                   </Col>
 
                   {/* Upcoming Matches */}
@@ -92,16 +92,34 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                     <h2 className="h5 mb-3 text-white">Upcoming Matches</h2>
 
                     {upcomingMatches.map((m) => (
-                      <div key={m.id} className="mb-3">
-                        <div className="fw-semibold text-white">{m.name}</div>
+                      <div key={m.id} className="mb-3 ca-event-card p-3">
+                        <div className="fw-semibold text-white mb-1">{m.name}</div>
                         <div className="text-secondary small">{m.date}</div>
                         {m.description && (
-                          <div className="text-secondary small">{m.description}</div>
+                          <div className="text-secondary small mb-2">
+                            {m.description}
+                          </div>
                         )}
+
+                        {/* Link to the unique match page */}
+                        <Link href={`/match/${m.id}`}>
+                          <Button
+                            size="sm"
+                            variant="outline-light"
+                            className="ca-glass-button"
+                          >
+                            View / Report
+                          </Button>
+                        </Link>
                       </div>
                     ))}
-                  </Col>
 
+                    {upcomingMatches.length === 0 && (
+                      <div className="text-secondary small">
+                        No upcoming matches scheduled.
+                      </div>
+                    )}
+                  </Col>
                 </Row>
 
                 {/* ----- BOTTOM FULL-WIDTH: RECENT RESULTS ----- */}
@@ -115,14 +133,18 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                         <div className="text-secondary small">{r.description}</div>
                       </div>
                     ))}
+
+                    {recentResults.length === 0 && (
+                      <div className="text-secondary small">
+                        No results recorded yet.
+                      </div>
+                    )}
                   </Col>
                 </Row>
-
               </Card.Body>
             </Card>
           </Col>
         </Row>
-
       </Container>
     </section>
   );
