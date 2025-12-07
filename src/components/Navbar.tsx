@@ -63,6 +63,9 @@ export default function NavBar() {
                 id="user-dropdown"
                 className="ca-nav-dropdown"
               >
+                <NavDropdown.Item as={Link} href="/profile">
+                  Profile
+                </NavDropdown.Item>
                 <NavDropdown.Item as={Link} href="/auth/change-password">
                   Change Password
                 </NavDropdown.Item>

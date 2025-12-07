@@ -4,10 +4,10 @@ import MatchClient from './MatchClient';
 
 const prisma = new PrismaClient();
 
-// Minimal shape we care about: user.email and team.name
+// Minimal shape we care about: user.name/email and team.name
 type ParticipantLike =
   | {
-      user: { email: string | null } | null;
+      user: { name: string | null; email: string | null } | null;
       team: { name: string } | null;
     }
   | null;
@@ -15,7 +15,10 @@ type ParticipantLike =
 function displayParticipant(p: ParticipantLike): string {
   if (!p) return 'TBD';
   if (p.team) return p.team.name;
-  if (p.user) return p.user.email ?? 'Unknown player';
+  if (p.user) {
+    // 👇 Prefer player name, then fall back to email
+    return p.user.name ?? p.user.email ?? 'Unknown player';
+  }
   return 'TBD';
 }
 
@@ -54,8 +57,8 @@ export default async function MatchPage({ params }: PageProps) {
     );
   }
 
-  const team1Name = displayParticipant(match.p1);
-  const team2Name = displayParticipant(match.p2);
+  const team1Name = displayParticipant(match.p1 as ParticipantLike);
+  const team2Name = displayParticipant(match.p2 as ParticipantLike);
 
   return (
     <MatchClient

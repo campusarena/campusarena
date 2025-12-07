@@ -38,12 +38,18 @@ export default function MatchClient({
 }: MatchClientProps) {
   const { data: session } = useSession();
 
-  const [team1Name, setTeam1Name] = useState(initialTeam1 || 'Team Alpha');
-  const [team2Name, setTeam2Name] = useState(initialTeam2 || 'Team Beta');
+  const [team1Name, setTeam1Name] = useState(initialTeam1 || 'Team / Player 1');
+  const [team2Name, setTeam2Name] = useState(initialTeam2 || 'Team / Player 2');
   const [team1Score, setTeam1Score] = useState(1);
   const [team2Score, setTeam2Score] = useState(1);
   const [isVerified, setIsVerified] = useState(false);
   const [pendingMatches, setPendingMatches] = useState<PendingMatch[]>([]);
+
+  // Prefer name → email → "Anonymous" for submittedBy
+  const submittedByLabel =
+    (session?.user as { name?: string | null; email?: string | null } | undefined)?.name ??
+    session?.user?.email ??
+    'Anonymous';
 
   // Per-match localStorage key so results are scoped to this match
   const storageKey = `campusarena_pending_matches_${matchId}`;
@@ -103,7 +109,7 @@ export default function MatchClient({
       team1Score,
       team2Score,
       status: 'pending',
-      submittedBy: session?.user?.email || 'Anonymous',
+      submittedBy: submittedByLabel,
     };
 
     setPendingMatches((prev) => [...prev, newMatch]);
@@ -120,29 +126,34 @@ export default function MatchClient({
           <Col lg={8} xl={6} className="mb-4">
             {/* Breadcrumb + back to dashboard */}
             <div className="d-flex justify-content-between align-items-center mb-3">
-                <Link
-                    href="/dashboard"
-                    className="btn btn-sm btn-outline-light ca-glass-button"
+              <Link
+                href="/dashboard"
+                className="btn btn-sm btn-outline-light ca-glass-button"
+              >
+                ← Back to Dashboard
+              </Link>
+
+              <Breadcrumb>
+                <Breadcrumb.Item linkAs={Link} href="/standings">
+                  Tournaments
+                </Breadcrumb.Item>
+
+                <Breadcrumb.Item
+                  linkAs={Link}
+                  href={`/events/${tournamentId}`}
                 >
-                    ← Back to Dashboard
-                </Link>
+                  {tournamentName}
+                </Breadcrumb.Item>
 
-                <Breadcrumb>
-                    <Breadcrumb.Item linkAs={Link} href="/standings">
-                    Tournaments
-                    </Breadcrumb.Item>
-
-                    <Breadcrumb.Item
-                    linkAs={Link}
-                    href={`/events/${tournamentId}`}
-                    >
-                    {tournamentName}
-                    </Breadcrumb.Item>
-
-                    <Breadcrumb.Item active>Match #{matchId}</Breadcrumb.Item>
-                </Breadcrumb>
+                <Breadcrumb.Item active>Match #{matchId}</Breadcrumb.Item>
+              </Breadcrumb>
             </div>
-            <h1 className="mb-4 text-white">Report Match Result</h1>
+
+            <h1 className="mb-1 text-white">Report Match Result</h1>
+            {/* Show names right under the title */}
+            <p className="ca-section-subtitle mb-4">
+              {team1Name} vs {team2Name}
+            </p>
 
             {/* Match Status Badge */}
             {isVerified && (
@@ -165,7 +176,7 @@ export default function MatchClient({
                       type="text"
                       value={team1Name}
                       onChange={(e) => setTeam1Name(e.target.value)}
-                      placeholder="Team 1 Name"
+                      placeholder="Team / Player 1 Name"
                       disabled={isVerified}
                       style={{
                         backgroundColor: '#0d0e13',
@@ -206,7 +217,7 @@ export default function MatchClient({
                       type="text"
                       value={team2Name}
                       onChange={(e) => setTeam2Name(e.target.value)}
-                      placeholder="Team 2 Name"
+                      placeholder="Team / Player 2 Name"
                       disabled={isVerified}
                       style={{
                         backgroundColor: '#0d0e13',
@@ -261,6 +272,14 @@ export default function MatchClient({
                 <span className="detail-label">Date &amp; Time</span>
                 <span className="detail-value">{formattedDateTime}</span>
               </div>
+              {pendingMatches.length > 0 && (
+                <div className="detail-row">
+                  <span className="detail-label">Last submitted by</span>
+                  <span className="detail-value">
+                    {pendingMatches[pendingMatches.length - 1].submittedBy}
+                  </span>
+                </div>
+              )}
             </div>
           </Col>
         </Row>

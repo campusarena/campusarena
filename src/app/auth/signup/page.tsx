@@ -8,6 +8,7 @@ import { Card, Col, Container, Button, Form, Row } from 'react-bootstrap';
 import { createUser } from '@/lib/dbActions';
 
 type SignUpForm = {
+  name: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -15,6 +16,10 @@ type SignUpForm = {
 
 const SignUp = () => {
   const validationSchema = Yup.object().shape({
+    name: Yup.string()
+      .required('Name is required')
+      .min(3, 'Name must be at least 3 characters')
+      .max(30, 'Name must not exceed 30 characters'),
     email: Yup.string().required('Email is required').email('Email is invalid'),
     password: Yup.string()
       .required('Password is required')
@@ -29,14 +34,46 @@ const SignUp = () => {
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
   } = useForm<SignUpForm>({
     resolver: yupResolver(validationSchema),
   });
 
   const onSubmit = async (data: SignUpForm) => {
-    await createUser(data);
-    await signIn('credentials', { callbackUrl: '/add', ...data });
+    const { email, password, name } = data;
+
+    try {
+      // Create user in DB
+      await createUser({ email, password, name });
+
+      // Then sign in
+      await signIn('credentials', {
+        callbackUrl: '/add', // or '/dashboard' later if you want
+        email,
+        password,
+      });
+    } catch (err: unknown) {
+      const message = (err as Error).message;
+
+      if (message === 'EMAIL_TAKEN') {
+        setError('email', {
+          type: 'manual',
+          message: 'That email is already registered.',
+        });
+        return;
+      }
+
+      if (message === 'NAME_TAKEN') {
+        setError('name', {
+          type: 'manual',
+          message: 'That name is already taken. Please choose another.',
+        });
+        return;
+      }
+
+      console.error('Sign up failed:', err);
+    }
   };
 
   return (
@@ -49,6 +86,20 @@ const SignUp = () => {
             <Card className="ca-auth-card">
               <Card.Body>
                 <Form onSubmit={handleSubmit(onSubmit)}>
+                  {/* Name */}
+                  <Form.Group className="mb-3">
+                    <Form.Label>Name</Form.Label>
+                    <input
+                      type="text"
+                      {...register('name')}
+                      className={`form-control ca-auth-input ${errors.name ? 'is-invalid' : ''}`}
+                    />
+                    <div className="invalid-feedback">
+                      {errors.name?.message}
+                    </div>
+                  </Form.Group>
+
+                  {/* Email */}
                   <Form.Group className="mb-3">
                     <Form.Label>Email</Form.Label>
                     <input
@@ -61,6 +112,7 @@ const SignUp = () => {
                     </div>
                   </Form.Group>
 
+                  {/* Password */}
                   <Form.Group className="mb-3">
                     <Form.Label>Password</Form.Label>
                     <input
@@ -73,12 +125,15 @@ const SignUp = () => {
                     </div>
                   </Form.Group>
 
+                  {/* Confirm Password */}
                   <Form.Group className="mb-3">
                     <Form.Label>Confirm Password</Form.Label>
                     <input
                       type="password"
                       {...register('confirmPassword')}
-                      className={`form-control ca-auth-input ${errors.confirmPassword ? 'is-invalid' : ''}`}
+                      className={`form-control ca-auth-input ${
+                        errors.confirmPassword ? 'is-invalid' : ''
+                      }`}
                     />
                     <div className="invalid-feedback">
                       {errors.confirmPassword?.message}
