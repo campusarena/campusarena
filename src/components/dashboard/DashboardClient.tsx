@@ -19,7 +19,8 @@ export default function DashboardClient({ data }: DashboardClientProps) {
   return (
     <section className="ca-section">
       <Container id="dashboard-page">
-        {/* Title and main button */}
+        
+        {/* ---------- HEADER & ACTION BUTTONS ---------- */}
         <Row className="mb-4 text-center">
           <Col>
             <h1 className="fw-bold text-white mb-2">Home Dashboard</h1>
@@ -27,23 +28,52 @@ export default function DashboardClient({ data }: DashboardClientProps) {
               See your active leagues, upcoming matches, and recent results in one place.
             </p>
 
-            {/* Create Event goes to /event (CreateEventForm) */}
-            <Link href="/createevent">
-              <Button size="lg" className="ca-cta-primary mt-3">
-                Create New Event
-              </Button>
-            </Link>
+            {/* Main action buttons */}
+            <div className="mt-4 d-flex flex-wrap justify-content-center gap-3">
+
+              {/* Create Event */}
+              <Link href="/createevent">
+                <Button size="lg" className="ca-cta-primary">
+                  Create New Event
+                </Button>
+              </Link>
+
+              {/* View Matches */}
+              <Link href="/match">
+                <Button
+                  size="lg"
+                  variant="outline-light"
+                  className="ca-cta-secondary"
+                >
+                  Matches
+                </Button>
+              </Link>
+
+              {/* View Standings */}
+              <Link href="/standings">
+                <Button
+                  size="lg"
+                  variant="outline-light"
+                  className="ca-cta-secondary"
+                >
+                  Standings
+                </Button>
+              </Link>
+
+            </div>
           </Col>
         </Row>
 
-        {/* Main dashboard card */}
+        {/* ---------- MAIN DASHBOARD CARD ---------- */}
         <Row className="justify-content-center">
           <Col md={10} lg={8}>
             <Card className="ca-hero-card">
               <Card.Body>
-                {/* Top row: Active Events + Upcoming Matches */}
+
+                {/* ----- TOP ROW: ACTIVE EVENTS + UPCOMING MATCHES ----- */}
                 <Row className="mb-4">
-                  {/* Active Events (top left) */}
+
+                  {/* Active Events */}
                   <Col md={6} className="mb-4 mb-md-0">
                     <h2 className="h5 mb-3 text-white">Active Events</h2>
 
@@ -57,7 +87,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                     ))}
                   </Col>
 
-                  {/* Upcoming Matches (top right) */}
+                  {/* Upcoming Matches */}
                   <Col md={6}>
                     <h2 className="h5 mb-3 text-white">Upcoming Matches</h2>
 
@@ -71,9 +101,10 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                       </div>
                     ))}
                   </Col>
+
                 </Row>
 
-                {/* Full-width Recent Results (My Next Matches removed) */}
+                {/* ----- BOTTOM FULL-WIDTH: RECENT RESULTS ----- */}
                 <Row>
                   <Col>
                     <h3 className="h6 mb-3 text-white">Recent Results</h3>
@@ -86,10 +117,12 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                     ))}
                   </Col>
                 </Row>
+
               </Card.Body>
             </Card>
           </Col>
         </Row>
+
       </Container>
     </section>
   );
