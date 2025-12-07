@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import Link from "next/link";
+import EventInviteForm from '@/components/EventInviteForm';
 
 const prisma = new PrismaClient();
 
@@ -154,6 +155,17 @@ export default async function EventDetailsPage({
               </table>
             </div>
           )}
+        </div>
+
+        {/* Invite Participants */}
+        <div className="ca-feature-card mb-4 p-4">
+          <h3 className="text-white mb-3">Invite Participants</h3>
+          <p className="text-light small mb-3">
+            Generate invite links to send to players or teams. They can accept the invite
+            to join this event.
+          </p>
+
+          <EventInviteForm tournamentId={tournament.id} />
         </div>
       </div>
     </section>
