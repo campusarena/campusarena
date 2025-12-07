@@ -34,18 +34,18 @@ export default function DashboardClient({ data }: DashboardClientProps) {
               {/* Create Event */}
               <Link href="/createevent">
                 <Button size="lg" className="ca-cta-primary">
-                  Create New Event
+                  Create Event
                 </Button>
               </Link>
 
               {/* Optional generic matches page (can remove if you don't have it yet) */}
-              <Link href="/matches">
+              <Link href="/join">
                 <Button
                   size="lg"
                   variant="outline-light"
                   className="ca-cta-secondary"
                 >
-                  Matches
+                  Join Event
                 </Button>
               </Link>
 
