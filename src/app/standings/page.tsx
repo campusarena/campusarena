@@ -1,3 +1,4 @@
+// src/app/standings/page.tsx
 import { prisma } from "@/lib/prisma";
 import StandingsClient, {
   TournamentStanding,
@@ -16,11 +17,13 @@ function formatDate(d: Date | null | undefined): string {
 }
 
 export default async function StandingsPage() {
-  // 1. Pull tournaments + participants + their matches from Prisma
+  // 1. Pull tournaments + participants (+ their matches, + user/team info)
   const tournaments = await prisma.tournament.findMany({
     include: {
       participants: {
         include: {
+          user: true,          // 👈 so we can use user.name / email
+          team: true,          // 👈 so we can use team.name
           matchesAsP1: true,
           matchesAsP2: true,
           matchesWon: true,
@@ -39,10 +42,18 @@ export default async function StandingsPage() {
       // simple placeholder scoring rule: 3 points per win
       const points = wins * 3;
 
+      // 🔹 Name logic:
+      // - Team event: use team.name
+      // - Individual event: prefer user.name, fall back to user.email
+      // - Fallback: Seed #
+      const displayName =
+        p.team?.name ??
+        p.user?.name ??
+        p.user?.email ??
+        `Seed ${p.seed ?? "?"}`;
+
       return {
-        team: p.userId
-          ? `Player ${p.userId}`
-          : `Seed ${p.seed ?? "?"}`,
+        team: displayName,
         wins,
         losses,
         points,
@@ -56,6 +67,7 @@ export default async function StandingsPage() {
       id: t.id,
       name: t.name,
       game: t.game,
+      // For now we just show the startDate as "next match"
       nextMatch: formatDate(t.startDate),
       standings,
     };

@@ -25,6 +25,7 @@ async function main() {
       email: 'admin@campusarena.test',
       password: passwordHash,
       role: Role.ADMIN,
+      name: 'Admin User',
     },
   });
 
@@ -35,6 +36,7 @@ async function main() {
       email: 'organizer@campusarena.test',
       password: passwordHash,
       role: Role.USER,
+      name: 'Organizer User',
     },
   });
 
@@ -45,6 +47,7 @@ async function main() {
       email: 'player1@campusarena.test',
       password: passwordHash,
       role: Role.USER,
+      name: 'Player JOHN',
     },
   });
 
@@ -55,6 +58,7 @@ async function main() {
       email: 'player2@campusarena.test',
       password: passwordHash,
       role: Role.USER,
+      name: 'Player FOO',
     },
   });
 
@@ -65,6 +69,7 @@ async function main() {
       email: 'player3@campusarena.test',
       password: passwordHash,
       role: Role.USER,
+      name: 'Player BAR',
     },
   });
 
@@ -75,6 +80,7 @@ async function main() {
       email: 'player4@campusarena.test',
       password: passwordHash,
       role: Role.USER,
+      name: 'Player BAZ',
     },
   });
 

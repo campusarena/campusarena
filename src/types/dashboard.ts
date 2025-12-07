@@ -23,6 +23,7 @@ export type DashboardResult = {
 };
 
 export type DashboardData = {
+  userName: string;
   activeEvents: DashboardEvent[];
   upcomingMatches: DashboardMatch[];
   nextMatches: DashboardMatch[];

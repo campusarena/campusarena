@@ -1,3 +1,4 @@
+// src/components/dashboard/DashboardClient.tsx
 'use client';
 
 import Container from 'react-bootstrap/Container';
@@ -14,7 +15,7 @@ type DashboardClientProps = {
 };
 
 export default function DashboardClient({ data }: DashboardClientProps) {
-  const { activeEvents, upcomingMatches, recentResults } = data;
+  const { userName, activeEvents, upcomingMatches, recentResults } = data;
 
   return (
     <section className="ca-section">
@@ -22,7 +23,9 @@ export default function DashboardClient({ data }: DashboardClientProps) {
         {/* ---------- HEADER & ACTION BUTTONS ---------- */}
         <Row className="mb-4 text-center">
           <Col>
-            <h1 className="fw-bold text-white mb-2">Home Dashboard</h1>
+            <h1 className="fw-bold text-white mb-2">
+              Welcome, {userName}
+            </h1>
             <p className="ca-section-subtitle">
               See your active leagues, upcoming matches, and recent results in one place.
             </p>

@@ -39,6 +39,7 @@ enum ReportStatus {
 model User {
   id       Int    @id @default(autoincrement())
   email    String @unique
+  name     String @unique
   password String
   role     Role   @default(USER)
 
