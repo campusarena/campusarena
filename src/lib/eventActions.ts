@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { EventFormat, EventRole } from '@prisma/client';
+import { regenerateSingleElimBracket } from '@/lib/bracketService';
 
 export async function createTournamentAction(formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -42,6 +43,9 @@ export async function createTournamentAction(formData: FormData) {
       ? visibilityRaw
       : 'PUBLIC';
 
+  const autoBracketRaw = formData.get('autoBracket') as string | null;
+  const autoBracket = autoBracketRaw === 'on';
+
   if (!name || !game) {
     throw new Error('Event name and game are required.');
   }
@@ -57,6 +61,7 @@ export async function createTournamentAction(formData: FormData) {
       maxParticipants,
       location: location || null,
       visibility,
+      // For now, store this flag on status string extension via metadata field later
     },
   });
 
@@ -68,5 +73,44 @@ export async function createTournamentAction(formData: FormData) {
     },
   });
 
+  if (autoBracket) {
+    await regenerateSingleElimBracket(tournament.id);
+  }
+
   redirect('/dashboard');
 }
+
+export async function regenerateBracketAction(formData: FormData) {
+  const session = await getServerSession(authOptions);
+  const userWithId = session?.user as { id?: string | number } | undefined;
+  const userIdStr = userWithId?.id;
+
+  if (!userIdStr) {
+    // Silently ignore; UI already hides the button when not authorized.
+    return;
+  }
+
+  const userId = Number(userIdStr);
+  const tournamentIdRaw = formData.get('tournamentId');
+  if (!tournamentIdRaw) {
+    return;
+  }
+  const tournamentId = Number(tournamentIdRaw);
+
+  const role = await prisma.eventRoleAssignment.findFirst({
+    where: {
+      tournamentId,
+      userId,
+      role: { in: [EventRole.OWNER, EventRole.ORGANIZER] },
+    },
+  });
+
+  if (!role) {
+    // Not authorized; do nothing so there is no thrown error.
+    return;
+  }
+
+  await regenerateSingleElimBracket(tournamentId);
+  redirect(`/events/${tournamentId}`);
+}
+

@@ -129,10 +129,20 @@ export async function acceptInvitation(token: string) {
   });
 
   if (!existingParticipant) {
+    // Auto-assign next available seed when a player joins via invite.
+    const maxSeedRow = await prisma.participant.findFirst({
+      where: { tournamentId: invitation.tournamentId },
+      orderBy: { seed: 'desc' },
+      select: { seed: true },
+    });
+
+    const nextSeed = (maxSeedRow?.seed ?? 0) + 1;
+
     await prisma.participant.create({
       data: {
         tournamentId: invitation.tournamentId,
         userId,
+        seed: nextSeed,
       },
     });
   }

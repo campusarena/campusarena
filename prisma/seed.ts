@@ -214,7 +214,92 @@ async function main() {
   console.log('  Semis:', upSemi1.id, upSemi2.id, '→ Final:', upFinalMatch.id);
 
   // ---------------------------------------------------------------------------
-  // 3. COMPLETED single-elim tournament for dashboard "recent results"
+  // 3. TEST tournament to exercise bracket generation logic
+  // ---------------------------------------------------------------------------
+
+  const bracketTestTournament = await prisma.tournament.upsert({
+    where: { id: 3 },
+    update: {},
+    create: {
+      name: 'Bracket Generation Test',
+      game: 'Test Game',
+      format: EventFormat.SINGLE_ELIM,
+      isTeamBased: false,
+      startDate: new Date(),
+      status: 'upcoming',
+      maxParticipants: 4,
+      location: 'Test Venue',
+      visibility: 'PUBLIC',
+    },
+  });
+
+  await prisma.eventRoleAssignment.upsert({
+    where: {
+      tournamentId_userId_role: {
+        tournamentId: bracketTestTournament.id,
+        userId: organizerUser.id,
+        role: EventRole.OWNER,
+      },
+    },
+    update: {},
+    create: {
+      tournamentId: bracketTestTournament.id,
+      userId: organizerUser.id,
+      role: EventRole.OWNER,
+    },
+  });
+
+  const bracketTestParticipants = await Promise.all([
+    prisma.participant.create({
+      data: {
+        tournamentId: bracketTestTournament.id,
+        userId: player1.id,
+        seed: 1,
+        checkedIn: true, // uncomment after migrating schema
+      },
+    }),
+    prisma.participant.create({
+      data: {
+        tournamentId: bracketTestTournament.id,
+        userId: player2.id,
+        seed: 2,
+        checkedIn: true,
+      },
+    }),
+    prisma.participant.create({
+      data: {
+        tournamentId: bracketTestTournament.id,
+        userId: player3.id,
+        seed: 3,
+        checkedIn: true,
+      },
+    }),
+    prisma.participant.create({
+      data: {
+        tournamentId: bracketTestTournament.id,
+        userId: player4.id,
+        seed: 4,
+        checkedIn: true,
+      },
+    }),
+  ]);
+
+  // Mark all participants in the bracket-test tournament as checked in so
+  // bracket generation works without manual logins.
+  // NOTE: After running `npx prisma migrate dev`, you can uncomment the block
+  // below to default all bracket-test participants to checked in.
+  // await prisma.participant.updateMany({
+  //   where: { tournamentId: bracketTestTournament.id },
+  //   data: { checkedIn: true },
+  // });
+
+  console.log('Bracket test tournament seed complete:');
+  console.log(
+    `  Tournament: ${bracketTestTournament.name} (id=${bracketTestTournament.id}), participants=${bracketTestParticipants.length}`,
+  );
+
+  // ---------------------------------------------------------------------------
+  // 4. COMPLETED single-elim tournament for dashboard "recent results"
   // ---------------------------------------------------------------------------
 
   const completedTournament = await prisma.tournament.upsert({
