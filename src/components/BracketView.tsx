@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import Link from 'next/link';
 
 type ParticipantRef = {
   id: number | null;
@@ -49,15 +50,20 @@ export function BracketView({ matches }: BracketViewProps) {
               Round {roundIdx + 1}
             </div>
             {roundMatches.map((m) => (
-              <div
+              <Link
                 key={m.id}
-                className="border rounded px-2 py-1 bg-dark text-light small"
-                style={{ minWidth: 180 }}
+                href={`/match/${m.id}`}
+                className="text-decoration-none text-light"
               >
-                <div>{m.p1.label || 'TBD'}</div>
-                <div className="text-secondary">vs</div>
-                <div>{m.p2.label || 'TBD'}</div>
-              </div>
+                <div
+                  className="border rounded px-2 py-1 bg-dark text-light small"
+                  style={{ minWidth: 180 }}
+                >
+                  <div>{m.p1.label || 'TBD'}</div>
+                  <div className="text-secondary">vs</div>
+                  <div>{m.p2.label || 'TBD'}</div>
+                </div>
+              </Link>
             ))}
           </div>
         ))}

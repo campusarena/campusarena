@@ -5,7 +5,6 @@ import {
   EventFormat,
   EventRole,
   MatchStatus,
-  ReportStatus,
 } from '@prisma/client';
 import { hash } from 'bcrypt';
 
@@ -13,6 +12,24 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding CampusArena test data...');
+
+  // Clean up any existing test data for our known tournaments so
+  // repeated seeds stay deterministic and don't accumulate rows.
+  const seedTournamentIds = [1, 2, 3];
+
+  // Delete child records that depend on tournaments 1-3.
+  await prisma.matchReport.deleteMany({
+    where: { match: { tournamentId: { in: seedTournamentIds } } },
+  });
+  await prisma.match.deleteMany({
+    where: { tournamentId: { in: seedTournamentIds } },
+  });
+  await prisma.participant.deleteMany({
+    where: { tournamentId: { in: seedTournamentIds } },
+  });
+  await prisma.eventRoleAssignment.deleteMany({
+    where: { tournamentId: { in: seedTournamentIds } },
+  });
 
   // One shared hash for all test users
   const passwordHash = await hash('password123', 10);
@@ -299,38 +316,36 @@ async function main() {
   );
 
   // ---------------------------------------------------------------------------
-  // 4. COMPLETED single-elim tournament for dashboard "recent results"
+  // 4. CLEAN single-elim tournament for end-to-end bracket testing (id=2)
   // ---------------------------------------------------------------------------
 
-  const completedTournament = await prisma.tournament.upsert({
+  const bracketTest2Tournament = await prisma.tournament.upsert({
     where: { id: 2 },
     update: {},
     create: {
-      name: 'Completed Smash Bracket',
+      name: 'Bracket Generation Test 2',
       game: 'Super Smash Bros. Ultimate',
       format: EventFormat.SINGLE_ELIM,
       isTeamBased: false,
-      startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
-      endDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-      status: 'completed',
+      startDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+      status: 'upcoming',
       maxParticipants: 16,
       location: 'UH Mānoa Campus - Ballroom',
-      visibility: 'PUBLIC', // example
+      visibility: 'PUBLIC',
     },
   });
 
-  // Event roles for completed tournament
-  const completedOwnerRole = await prisma.eventRoleAssignment.upsert({
+  await prisma.eventRoleAssignment.upsert({
     where: {
       tournamentId_userId_role: {
-        tournamentId: completedTournament.id,
+        tournamentId: bracketTest2Tournament.id,
         userId: adminUser.id,
         role: EventRole.OWNER,
       },
     },
     update: {},
     create: {
-      tournamentId: completedTournament.id,
+      tournamentId: bracketTest2Tournament.id,
       userId: adminUser.id,
       role: EventRole.OWNER,
     },
@@ -339,140 +354,55 @@ async function main() {
   await prisma.eventRoleAssignment.upsert({
     where: {
       tournamentId_userId_role: {
-        tournamentId: completedTournament.id,
+        tournamentId: bracketTest2Tournament.id,
         userId: organizerUser.id,
         role: EventRole.ORGANIZER,
       },
     },
     update: {},
     create: {
-      tournamentId: completedTournament.id,
+      tournamentId: bracketTest2Tournament.id,
       userId: organizerUser.id,
       role: EventRole.ORGANIZER,
     },
   });
 
-  // Participants for completed tournament (same players, new Participant rows)
-  const completedParticipants = await Promise.all([
+  await Promise.all([
     prisma.participant.create({
       data: {
-        tournamentId: completedTournament.id,
+        tournamentId: bracketTest2Tournament.id,
         userId: player1.id,
         seed: 1,
+        checkedIn: true,
       },
     }),
     prisma.participant.create({
       data: {
-        tournamentId: completedTournament.id,
+        tournamentId: bracketTest2Tournament.id,
         userId: player2.id,
         seed: 2,
+        checkedIn: true,
       },
     }),
     prisma.participant.create({
       data: {
-        tournamentId: completedTournament.id,
+        tournamentId: bracketTest2Tournament.id,
         userId: player3.id,
         seed: 3,
+        checkedIn: true,
       },
     }),
     prisma.participant.create({
       data: {
-        tournamentId: completedTournament.id,
+        tournamentId: bracketTest2Tournament.id,
         userId: player4.id,
         seed: 4,
+        checkedIn: true,
       },
     }),
   ]);
 
-  const [cP1, cP2, cP3, cP4] = completedParticipants;
-
-  // ROUND 1: semis (both VERIFIED)
-  const completedTimeSemi1 = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000); // 3 days ago
-  const completedTimeSemi2 = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000); // +1h
-
-  const cSemi1 = await prisma.match.create({
-    data: {
-      tournamentId: completedTournament.id,
-      roundNumber: 1,
-      slotIndex: 1,
-      p1Id: cP1.id,
-      p2Id: cP4.id,
-      p1Score: 2,
-      p2Score: 0,
-      winnerId: cP1.id,
-      status: MatchStatus.VERIFIED,
-      location: 'Side Setup A',
-      scheduledAt: completedTimeSemi1,
-      completedAt: completedTimeSemi1,
-    },
-  });
-
-  const cSemi2 = await prisma.match.create({
-    data: {
-      tournamentId: completedTournament.id,
-      roundNumber: 1,
-      slotIndex: 2,
-      p1Id: cP2.id,
-      p2Id: cP3.id,
-      p1Score: 2,
-      p2Score: 1,
-      winnerId: cP2.id,
-      status: MatchStatus.VERIFIED,
-      location: 'Side Setup B',
-      scheduledAt: completedTimeSemi2,
-      completedAt: completedTimeSemi2,
-    },
-  });
-
-  // ROUND 2: final (VERIFIED)
-  const completedTimeFinal = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
-
-  const cFinal = await prisma.match.create({
-    data: {
-      tournamentId: completedTournament.id,
-      roundNumber: 2,
-      slotIndex: 1,
-      p1Id: cP1.id, // winner of semi1
-      p2Id: cP2.id, // winner of semi2
-      p1Score: 3,
-      p2Score: 1,
-      winnerId: cP1.id,
-      status: MatchStatus.VERIFIED,
-      location: 'Main Stage',
-      scheduledAt: completedTimeFinal,
-      completedAt: completedTimeFinal,
-    },
-  });
-
-  // Link semis to final via nextMatchId for bracket wiring
-  await prisma.match.update({
-    where: { id: cSemi1.id },
-    data: { nextMatchId: cFinal.id },
-  });
-
-  await prisma.match.update({
-    where: { id: cSemi2.id },
-    data: { nextMatchId: cFinal.id },
-  });
-
-  // One approved MatchReport for the final
-  await prisma.matchReport.create({
-    data: {
-      matchId: cFinal.id,
-      reportedById: player1.id, // winner reports
-      p1Score: 3,
-      p2Score: 1,
-      winnerParticipantId: cP1.id,
-      status: ReportStatus.APPROVED,
-      createdAt: completedTimeFinal,
-      reviewedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000), // +30min
-      reviewedByRoleId: completedOwnerRole.id,
-    },
-  });
-
-  console.log('Completed tournament seed complete:');
-  console.log(`  Tournament: ${completedTournament.name} (id=${completedTournament.id})`);
-  console.log('  Semis:', cSemi1.id, cSemi2.id, '→ Final:', cFinal.id);
+  console.log('Clean bracket test tournament seed complete (id=2).');
 }
 
 main()

@@ -5,6 +5,9 @@ import { BracketView, type BracketMatch } from '@/components/BracketView';
 import { regenerateBracketAction } from '@/lib/eventActions';
 import { prisma } from '@/lib/prisma';
 import { CheckInButton } from './CheckInButton';
+import ParticipantsTable from './ParticipantsTable';
+import { getServerSession } from 'next-auth';
+import authOptions from '@/lib/authOptions';
 
 interface EventDetailsParams {
   id: string;
@@ -15,6 +18,10 @@ export default async function EventDetailsPage({
 }: {
   params: EventDetailsParams;
 }) {
+  const session = await getServerSession(authOptions);
+  const typedUser = session?.user as { id?: string | number } | undefined;
+  const currentUserId = typedUser?.id ? Number(typedUser.id) : null;
+
   const tournamentId = Number(params.id);
 
   const tournament = await prisma.tournament.findUnique({
@@ -52,26 +59,11 @@ export default async function EventDetailsPage({
     );
   }
 
-  const playerKeyForParticipant = (p: (typeof tournament.participants)[number]) =>
-    p.userId ?? p.teamId ?? p.id;
+  const playerKeyForParticipant = (p: { id: number }) => p.id;
 
-  const participantByPlayer = new Map<
-    number,
-    (typeof tournament.participants)[number]
-  >();
-
-  for (const p of tournament.participants) {
-    const key = playerKeyForParticipant(p);
-    const existing = participantByPlayer.get(key);
-
-    // Prefer the record that has a non-null seed so the UI
-    // shows seeded rows where available.
-    if (!existing || existing.seed == null) {
-      participantByPlayer.set(key, p);
-    }
-  }
-
-  const uniqueParticipants = Array.from(participantByPlayer.values());
+  // Use the tournament participants list as the authoritative set for
+  // standings, keyed solely by participant id.
+  const uniqueParticipants = [...tournament.participants];
 
   const upcomingMatches = Array.from(
     new Map(
@@ -105,12 +97,12 @@ export default async function EventDetailsPage({
   const recordByPlayer = new Map<number, { wins: number; losses: number }>();
 
   for (const m of tournament.matches) {
-    if (!m.winnerId || !m.p1 || !m.p2) continue;
+    if (m.status !== 'VERIFIED' || !m.winnerId || !m.p1Id || !m.p2Id) continue;
 
-    const p1Key = playerKeyForParticipant(m.p1);
-    const p2Key = playerKeyForParticipant(m.p2);
+    const p1Key = m.p1Id;
+    const p2Key = m.p2Id;
 
-    const winnerKey = m.winnerId === m.p1.id ? p1Key : p2Key;
+    const winnerKey = m.winnerId === m.p1Id ? p1Key : p2Key;
     const loserKey = winnerKey === p1Key ? p2Key : p1Key;
 
     const winnerRec = recordByPlayer.get(winnerKey) ?? { wins: 0, losses: 0 };
@@ -122,10 +114,35 @@ export default async function EventDetailsPage({
     recordByPlayer.set(loserKey, loserRec);
   }
 
-  // Simple organizer check for now: any OWNER or ORGANIZER.
-  const hasOrganizerAccess = tournament.staff.some(
-    (s) => s.role === EventRole.OWNER || s.role === EventRole.ORGANIZER,
+  const participantRecordsForClient = uniqueParticipants.map((p) => {
+    const key = playerKeyForParticipant(p);
+    const rec = recordByPlayer.get(key) ?? { wins: 0, losses: 0 };
+    return {
+      participantId: p.id,
+      seed: p.seed,
+      name: p.user?.name ?? p.team?.name ?? "Unknown",
+      key,
+      wins: rec.wins,
+      losses: rec.losses,
+    };
+  });
+
+  // Simple organizer check for now: any OWNER or ORGANIZER for this user.
+  const hasOrganizerAccess = !!(
+    currentUserId &&
+    tournament.staff.some(
+      (s) =>
+        s.userId === currentUserId &&
+        (s.role === EventRole.OWNER || s.role === EventRole.ORGANIZER),
+    )
   );
+
+  // Determine if the current user is a participant and whether they are checked in.
+  const currentUserParticipant = currentUserId
+    ? tournament.participants.find((p) => p.userId === currentUserId)
+    : undefined;
+  const isParticipant = !!currentUserParticipant;
+  const isCheckedIn = !!currentUserParticipant?.checkedIn;
 
   return (
     <section className="ca-standings-page">
@@ -177,57 +194,20 @@ export default async function EventDetailsPage({
             </form>
           )}
 
-          {/* Check-in button is visible for any logged-in participant; the */}
-          {/* server action itself validates that the user is actually */}
-          {/* registered for this tournament. */}
-          <CheckInButton tournamentId={tournament.id} />
+          {/* Check-in controls: only show the button for participants who */}
+          {/* have not yet checked in. If already checked in, show text. */}
+          {isParticipant && !isCheckedIn && (
+            <CheckInButton tournamentId={tournament.id} />
+          )}
+          {isParticipant && isCheckedIn && (
+            <p className="mt-3 text-light small mb-0">
+              You are checked in for this event.
+            </p>
+          )}
         </div>
 
         {/* Participants – uses ca-standings-table for zebra rows */}
-        <div className="ca-feature-card mb-4 p-4">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h3 className="text-white mb-0">Participants</h3>
-            <div className="d-flex align-items-center gap-2">
-              <span className="text-light small">Sort by:</span>
-              <select
-                className="form-select form-select-sm bg-dark text-light border-secondary"
-                name="participantSort"
-                defaultValue="seed"
-                onChange={undefined}
-              >
-                <option value="seed">Seed</option>
-                <option value="record">Record (W-L)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="ca-standings-table mt-3">
-            <table className="table table-sm mb-0">
-              <thead>
-                <tr>
-                  <th className="text-center">Seed</th>
-                  <th>Player / Team</th>
-                  <th className="text-center">Record</th>
-                </tr>
-              </thead>
-              <tbody>
-                {uniqueParticipants.map((p) => (
-                  <tr key={p.id}>
-                    <td className="text-center">{p.seed}</td>
-                    <td>{p.user?.name ?? p.team?.name ?? "Unknown"}</td>
-                    <td className="text-center">
-                      {(() => {
-                        const rec = recordByPlayer.get(playerKeyForParticipant(p));
-                        if (!rec) return '0-0';
-                        return `${rec.wins}-${rec.losses}`;
-                      })()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ParticipantsTable participants={participantRecordsForClient} />
 
         {/* Visual Bracket */}
         <BracketView matches={bracketMatches} />
@@ -254,13 +234,15 @@ export default async function EventDetailsPage({
                     <tr key={match.id}>
                       <td className="text-center">{match.roundNumber}</td>
                       <td>
-                        {match.p1?.user?.name ??
-                          match.p1?.team?.name ??
-                          "TBD"}{" "}
-                        vs{" "}
-                        {match.p2?.user?.name ??
-                          match.p2?.team?.name ??
-                          "TBD"}
+                        <Link href={`/match/${match.id}`} className="text-decoration-none text-light">
+                          {match.p1?.user?.name ??
+                            match.p1?.team?.name ??
+                            "TBD"}{" "}
+                          vs{" "}
+                          {match.p2?.user?.name ??
+                            match.p2?.team?.name ??
+                            "TBD"}
+                        </Link>
                       </td>
                       <td>{match.location ?? "TBD"}</td>
                       <td className="text-uppercase small">{match.status}</td>

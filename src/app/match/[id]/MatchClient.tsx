@@ -1,20 +1,17 @@
 // src/app/matches/[id]/MatchClient.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Container, Row, Col, Form, Button, Badge, Breadcrumb } from 'react-bootstrap';
-import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import './match.css';
 
 interface PendingMatch {
-  id: string;
-  team1Name: string;
-  team2Name: string;
-  team1Score: number;
-  team2Score: number;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedBy?: string;
+  id: number;
+  p1Score: number;
+  p2Score: number;
+  winnerParticipantId: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
 type MatchClientProps = {
@@ -25,6 +22,11 @@ type MatchClientProps = {
   team2Name?: string | null;
   gameName: string;
   scheduledAt: string | null; // ISO string or null
+  hasOrganizerAccess?: boolean;
+  reportId: number | null;
+  matchStatus: 'PENDING' | 'SCHEDULED' | 'REPORTED' | 'VERIFIED' | 'CANCELED' | 'READY' | 'IN_PROGRESS' | 'COMPLETE';
+  initialP1Score: number | null;
+  initialP2Score: number | null;
 };
 
 export default function MatchClient({
@@ -35,24 +37,31 @@ export default function MatchClient({
   team2Name: initialTeam2,
   gameName,
   scheduledAt,
+  hasOrganizerAccess,
+  reportId,
+  matchStatus,
+  initialP1Score,
+  initialP2Score,
 }: MatchClientProps) {
-  const { data: session } = useSession();
 
   const [team1Name, setTeam1Name] = useState(initialTeam1 || 'Team / Player 1');
   const [team2Name, setTeam2Name] = useState(initialTeam2 || 'Team / Player 2');
-  const [team1Score, setTeam1Score] = useState(1);
-  const [team2Score, setTeam2Score] = useState(1);
-  const [isVerified, setIsVerified] = useState(false);
-  const [pendingMatches, setPendingMatches] = useState<PendingMatch[]>([]);
-
-  // Prefer name → email → "Anonymous" for submittedBy
-  const submittedByLabel =
-    (session?.user as { name?: string | null; email?: string | null } | undefined)?.name ??
-    session?.user?.email ??
-    'Anonymous';
-
-  // Per-match localStorage key so results are scoped to this match
-  const storageKey = `campusarena_pending_matches_${matchId}`;
+  const [team1Score, setTeam1Score] = useState(initialP1Score ?? 0);
+  const [team2Score, setTeam2Score] = useState(initialP2Score ?? 0);
+  const [isLocked, setIsLocked] = useState(
+    matchStatus === 'REPORTED' || matchStatus === 'VERIFIED',
+  );
+  const [pendingReport, setPendingReport] = useState<PendingMatch | null>(
+    reportId
+      ? {
+          id: reportId,
+          p1Score: team1Score,
+          p2Score: team2Score,
+          winnerParticipantId: 0,
+          status: 'PENDING',
+        }
+      : null,
+  );
 
   const formattedDateTime = scheduledAt
     ? new Date(scheduledAt).toLocaleString('en-US', {
@@ -65,58 +74,53 @@ export default function MatchClient({
       })
     : 'TBD';
 
-  // Load data from localStorage on mount
-  const loadData = () => {
-    const savedPending = localStorage.getItem(storageKey);
-    if (savedPending) {
-      setPendingMatches(JSON.parse(savedPending));
-      // If something was already submitted for this match, lock the form
-      setIsVerified(true);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === storageKey) {
-        loadData();
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey]);
-
-  // Save to localStorage whenever data changes
-  useEffect(() => {
-    if (pendingMatches.length > 0) {
-      localStorage.setItem(storageKey, JSON.stringify(pendingMatches));
-    }
-  }, [pendingMatches, storageKey]);
-
-  const handleSubmitMatch = () => {
+  const handleSubmitMatch = async () => {
     if (!team1Name || !team2Name || team1Score === team2Score) {
       alert('Please enter valid team names and scores (no ties allowed)');
       return;
     }
+    try {
+      // Tell the server which side won; it will map this to the
+      // correct Participant.id based on p1Id / p2Id.
+      const winnerSide = team1Score > team2Score ? 'P1' : 'P2';
 
-    const newMatch: PendingMatch = {
-      id: Date.now().toString(),
-      team1Name,
-      team2Name,
-      team1Score,
-      team2Score,
-      status: 'pending',
-      submittedBy: submittedByLabel,
-    };
+      const response = await fetch('/api/match/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          matchId,
+          p1Score: team1Score,
+          p2Score: team2Score,
+          winnerSide,
+        }),
+      });
 
-    setPendingMatches((prev) => [...prev, newMatch]);
-    setIsVerified(true); // Lock the form locally
+      const data = await response.json();
 
-    // TODO: later replace with server action to create a MatchReport row.
-    alert('Match submitted for admin approval!');
+      if (!response.ok || !data.success) {
+        alert(data.error || 'Failed to submit match report');
+        return;
+      }
+
+      const localReport: PendingMatch = {
+        id: data.report.id,
+        p1Score: data.report.p1Score,
+        p2Score: data.report.p2Score,
+        winnerParticipantId: data.report.winnerParticipantId,
+        status: data.report.status,
+      };
+
+      setPendingReport(localReport);
+      setIsLocked(true);
+
+      alert(
+        data.message ||
+          'Match result submitted successfully. Waiting for organizer verification.',
+      );
+    } catch (err) {
+      console.error('Error submitting match report', err);
+      alert('Unexpected error submitting match report');
+    }
   };
 
   return (
@@ -156,7 +160,7 @@ export default function MatchClient({
             </p>
 
             {/* Match Status Badge */}
-            {isVerified && (
+            {isLocked && (
               <div className="mb-3">
                 <Badge
                   bg="success"
@@ -177,7 +181,7 @@ export default function MatchClient({
                       value={team1Name}
                       onChange={(e) => setTeam1Name(e.target.value)}
                       placeholder="Team / Player 1 Name"
-                      disabled={isVerified}
+                      disabled={isLocked}
                       style={{
                         backgroundColor: '#0d0e13',
                         border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -196,7 +200,7 @@ export default function MatchClient({
                       onChange={(e) =>
                         setTeam1Score(parseInt(e.target.value, 10) || 0)
                       }
-                      disabled={isVerified}
+                      disabled={isLocked}
                       style={{
                         backgroundColor: '#0d0e13',
                         border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -218,7 +222,7 @@ export default function MatchClient({
                       value={team2Name}
                       onChange={(e) => setTeam2Name(e.target.value)}
                       placeholder="Team / Player 2 Name"
-                      disabled={isVerified}
+                      disabled={isLocked}
                       style={{
                         backgroundColor: '#0d0e13',
                         border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -237,7 +241,7 @@ export default function MatchClient({
                       onChange={(e) =>
                         setTeam2Score(parseInt(e.target.value, 10) || 0)
                       }
-                      disabled={isVerified}
+                      disabled={isLocked}
                       style={{
                         backgroundColor: '#0d0e13',
                         border: '1px solid rgba(255, 255, 255, 0.12)',
@@ -255,9 +259,9 @@ export default function MatchClient({
                 className="report-score-btn mt-4"
                 size="lg"
                 onClick={handleSubmitMatch}
-                disabled={isVerified}
+                disabled={isLocked}
               >
-                {isVerified ? 'MATCH LOCKED' : 'SUBMIT MATCH'}
+                {isLocked ? 'MATCH LOCKED' : 'SUBMIT MATCH'}
               </Button>
             </div>
 
@@ -272,12 +276,57 @@ export default function MatchClient({
                 <span className="detail-label">Date &amp; Time</span>
                 <span className="detail-value">{formattedDateTime}</span>
               </div>
-              {pendingMatches.length > 0 && (
+              {pendingReport && (
                 <div className="detail-row">
-                  <span className="detail-label">Last submitted by</span>
-                  <span className="detail-value">
-                    {pendingMatches[pendingMatches.length - 1].submittedBy}
-                  </span>
+                  <span className="detail-label">Report status</span>
+                  <span className="detail-value">{pendingReport.status}</span>
+                </div>
+              )}
+
+              {hasOrganizerAccess && reportId && (
+                <div className="mt-3">
+                  <Button
+                    variant="success"
+                    size="sm"
+                    className="me-2"
+                    onClick={async () => {
+                      const res = await fetch('/api/match/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reportId, action: 'approve' }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok || !data.success) {
+                        alert(data.error || 'Failed to verify match report');
+                        return;
+                      }
+                      alert(data.message || 'Match result verified successfully');
+                    }}
+                  >
+                    Verify Match Result
+                  </Button>
+                  <Button
+                    variant="outline-light"
+                    size="sm"
+                    onClick={async () => {
+                      const res = await fetch('/api/match/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reportId, action: 'reject' }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok || !data.success) {
+                        alert(data.error || 'Failed to reject match report');
+                        return;
+                      }
+                      alert(data.message || 'Match result rejected');
+                      // Clear local pending state so the form can be edited again.
+                      setPendingReport(null);
+                      setIsLocked(false);
+                    }}
+                  >
+                    Reject Report
+                  </Button>
                 </div>
               )}
             </div>
