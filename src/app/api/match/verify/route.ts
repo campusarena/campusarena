@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import authOptions from '@/lib/authOptions';
+import { EventRole } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -17,25 +18,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Get user and check if admin
+    // Get user
     const user = await prisma.user.findUnique({
       where: { email: session.user.email! },
     });
 
-    if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Get the report
     const report = await prisma.matchReport.findUnique({
       where: { id: reportId },
       include: {
-        match: true,
+        match: {
+          include: {
+            tournament: true,
+            // We need nextMatch wiring and round/slot to know where to
+            // promote the winner.
+            nextMatch: true,
+          },
+        },
       },
     });
 
     if (!report) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+    }
+
+    // Only event owners/organizers for this tournament may verify/reject.
+    const organizerRole = await prisma.eventRoleAssignment.findFirst({
+      where: {
+        tournamentId: report.match.tournamentId,
+        userId: user.id,
+        role: { in: [EventRole.OWNER, EventRole.ORGANIZER] },
+      },
+    });
+
+    if (!organizerRole) {
+      return NextResponse.json({ error: 'Organizer or owner access required' }, { status: 403 });
     }
 
     if (action === 'approve') {
@@ -45,11 +66,21 @@ export async function POST(request: NextRequest) {
         data: {
           status: 'APPROVED',
           reviewedAt: new Date(),
+          reviewedByRoleId: organizerRole.id,
         },
       });
 
+      // Sanity check: winnerParticipantId must be one of the match participants
+      if (!report.winnerParticipantId ||
+          (report.winnerParticipantId !== report.match.p1Id &&
+           report.winnerParticipantId !== report.match.p2Id)) {
+        return NextResponse.json({
+          error: 'Report winner does not match match participants',
+        }, { status: 400 });
+      }
+
       // Update match with final scores and status
-      await prisma.match.update({
+      const updatedMatch = await prisma.match.update({
         where: { id: report.matchId },
         data: {
           p1Score: report.p1Score,
@@ -59,6 +90,24 @@ export async function POST(request: NextRequest) {
           completedAt: new Date(),
         },
       });
+
+      // If this match feeds into a nextMatch, promote the winner into the
+      // correct slot (p1 or p2) based on this match's slotIndex.
+      if (report.match.nextMatchId) {
+        const parent = await prisma.match.findUnique({
+          where: { id: report.match.nextMatchId },
+        });
+
+        if (parent) {
+          const isLeftChild = (report.match.slotIndex ?? 1) % 2 === 1;
+          await prisma.match.update({
+            where: { id: parent.id },
+            data: isLeftChild
+              ? { p1Id: updatedMatch.winnerId ?? undefined }
+              : { p2Id: updatedMatch.winnerId ?? undefined },
+          });
+        }
+      }
 
       return NextResponse.json({ 
         success: true, 

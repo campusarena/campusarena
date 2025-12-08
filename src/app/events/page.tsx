@@ -52,7 +52,7 @@ export default async function EventsPage() {
           p2: { include: { user: true, team: true } },
         },
         where: {
-          status: MatchStatus.COMPLETE,
+          status: MatchStatus.VERIFIED,
         },
       },
     },
