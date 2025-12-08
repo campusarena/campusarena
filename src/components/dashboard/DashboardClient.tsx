@@ -49,14 +49,14 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                 </Button>
               </Link>
 
-              {/* View Standings */}
-              <Link href="/standings">
+              {/* View Events */}
+              <Link href="/events">
                 <Button
                   size="lg"
                   variant="outline-light"
                   className="ca-cta-secondary"
                 >
-                  Standings
+                  Events
                 </Button>
               </Link>
             </div>
