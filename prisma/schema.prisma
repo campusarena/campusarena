@@ -19,9 +19,12 @@ enum EventFormat {
 
 enum MatchStatus {
   PENDING
+  READY        // Both players checked in
+  IN_PROGRESS  // Match is actively being played
   SCHEDULED
   REPORTED
   VERIFIED
+  COMPLETE     // Match finished and verified
   CANCELED
 }
 
@@ -164,6 +167,10 @@ model Match {
 
   p1Score Int?
   p2Score Int?
+
+  // Check-in system for match readiness
+  checkIn1 Boolean @default(false)
+  checkIn2 Boolean @default(false)
 
   scheduledAt DateTime?
   completedAt DateTime?
