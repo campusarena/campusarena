@@ -7,6 +7,155 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                  Int                   @id @default(autoincrement())
+  email               String                @unique
+  password            String
+  role                Role                  @default(USER)
+  name                String?
+  eventRoles          EventRoleAssignment[]
+  invitationsSent     Invitation[]          @relation("InvitationsSent")
+  invitationsReceived Invitation[]          @relation("InvitationsReceived")
+  submittedReports    MatchReport[]         @relation("ReportedByUser")
+  participants        Participant[]
+  teamMemberships     TeamMember[]
+}
+
+model Tournament {
+  id              Int                   @id @default(autoincrement())
+  name            String
+  game            String
+  startDate       DateTime
+  endDate         DateTime?
+  status          String                @default("upcoming")
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  format          EventFormat           @default(SINGLE_ELIM)
+  isTeamBased     Boolean               @default(true)
+  location        String?
+  maxParticipants Int?
+  visibility      TournamentVisibility  @default(PRIVATE)
+  staff           EventRoleAssignment[]
+  Invitation      Invitation[]
+  matches         Match[]
+  participants    Participant[]
+  teams           Team[]
+}
+
+model Team {
+  id           Int           @id @default(autoincrement())
+  name         String
+  tournamentId Int
+  createdAt    DateTime      @default(now())
+  tag          String?
+  participants Participant[]
+  tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  members      TeamMember[]
+
+  @@unique([tournamentId, name])
+}
+
+model TeamMember {
+  id        Int     @id @default(autoincrement())
+  teamId    Int
+  userId    Int
+  isCaptain Boolean @default(false)
+  team      Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([teamId, userId])
+}
+
+model Participant {
+  id           Int        @id @default(autoincrement())
+  tournamentId Int
+  userId       Int?
+  teamId       Int?
+  seed         Int?
+  joinedAt     DateTime   @default(now())
+  matchesAsP1  Match[]    @relation("MatchP1")
+  matchesAsP2  Match[]    @relation("MatchP2")
+  matchesWon   Match[]    @relation("MatchWinner")
+  team         Team?      @relation(fields: [teamId], references: [id])
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user         User?      @relation(fields: [userId], references: [id])
+
+  @@index([tournamentId])
+}
+
+model EventRoleAssignment {
+  id              Int           @id @default(autoincrement())
+  tournamentId    Int
+  userId          Int
+  role            EventRole
+  tournament      Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id])
+  reviewedReports MatchReport[] @relation("ReviewedByRole")
+
+  @@unique([tournamentId, userId, role])
+}
+
+model Match {
+  id           Int           @id @default(autoincrement())
+  tournamentId Int
+  winnerId     Int?
+  scheduledAt  DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  location     String?
+  nextMatchId  Int?
+  p1Id         Int?
+  p1Score      Int?
+  p2Id         Int?
+  p2Score      Int?
+  roundNumber  Int?
+  slotIndex    Int?
+  status       MatchStatus   @default(PENDING)
+  checkIn1     Boolean       @default(false)
+  checkIn2     Boolean       @default(false)
+  nextMatch    Match?        @relation("MatchNext", fields: [nextMatchId], references: [id])
+  children     Match[]       @relation("MatchNext")
+  p1           Participant?  @relation("MatchP1", fields: [p1Id], references: [id])
+  p2           Participant?  @relation("MatchP2", fields: [p2Id], references: [id])
+  tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  winner       Participant?  @relation("MatchWinner", fields: [winnerId], references: [id])
+  reports      MatchReport[]
+
+  @@index([tournamentId, roundNumber])
+  @@index([tournamentId, status])
+}
+
+model MatchReport {
+  id                  Int                  @id @default(autoincrement())
+  matchId             Int
+  reportedById        Int
+  p1Score             Int
+  p2Score             Int
+  winnerParticipantId Int
+  status              ReportStatus         @default(PENDING)
+  createdAt           DateTime             @default(now())
+  reviewedAt          DateTime?
+  reviewedByRoleId    Int?
+  match               Match                @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  reportedBy          User                 @relation("ReportedByUser", fields: [reportedById], references: [id])
+  reviewedByRole      EventRoleAssignment? @relation("ReviewedByRole", fields: [reviewedByRoleId], references: [id])
+}
+
+model Invitation {
+  id            Int              @id @default(autoincrement())
+  tournamentId  Int
+  invitedById   Int
+  invitedUserId Int?
+  invitedEmail  String
+  token         String           @unique
+  status        InvitationStatus @default(PENDING)
+  createdAt     DateTime         @default(now())
+  respondedAt   DateTime?
+  invitedBy     User             @relation("InvitationsSent", fields: [invitedById], references: [id])
+  invitedUser   User?            @relation("InvitationsReceived", fields: [invitedUserId], references: [id])
+  tournament    Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+}
+
 enum Role {
   USER
   ADMIN
@@ -14,18 +163,17 @@ enum Role {
 
 enum EventFormat {
   SINGLE_ELIM
-  // Future: DOUBLE_ELIM, ROUND_ROBIN, SWISS, etc.
 }
 
 enum MatchStatus {
   PENDING
-  READY        // Both players checked in
-  IN_PROGRESS  // Match is actively being played
   SCHEDULED
   REPORTED
   VERIFIED
-  COMPLETE     // Match finished and verified
   CANCELED
+  READY
+  IN_PROGRESS
+  COMPLETE
 }
 
 enum EventRole {
@@ -39,178 +187,9 @@ enum ReportStatus {
   REJECTED
 }
 
-model User {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
-  password String
-  role     Role   @default(USER)
-
-  participants     Participant[]
-  teamMemberships  TeamMember[]
-  eventRoles       EventRoleAssignment[]
-  submittedReports MatchReport[]         @relation("ReportedByUser")
-
-  invitationsSent     Invitation[] @relation("InvitationsSent")
-  invitationsReceived Invitation[] @relation("InvitationsReceived")
-}
-
 enum TournamentVisibility {
-  PUBLIC // anyone can view + request to join
-  PRIVATE // only invited/participants/staff can view
-}
-
-model Tournament {
-  id          Int         @id @default(autoincrement())
-  name        String
-  game        String
-  format      EventFormat @default(SINGLE_ELIM)
-  isTeamBased Boolean     @default(true)
-
-  startDate DateTime
-  endDate   DateTime?
-  status    String    @default("upcoming")
-
-  maxParticipants Int?
-  location        String?
-
-  // NEW:
-  visibility TournamentVisibility @default(PRIVATE)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  matches      Match[]
-  teams        Team[]
-  participants Participant[]
-  staff        EventRoleAssignment[]
-  Invitation   Invitation[]
-}
-
-model Team {
-  id           Int     @id @default(autoincrement())
-  tournamentId Int
-  name         String
-  tag          String?
-
-  tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  members      TeamMember[]
-  participants Participant[]
-
-  createdAt DateTime @default(now())
-
-  @@unique([tournamentId, name])
-}
-
-model TeamMember {
-  id        Int     @id @default(autoincrement())
-  teamId    Int
-  userId    Int
-  isCaptain Boolean @default(false)
-
-  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id])
-
-  @@unique([teamId, userId])
-}
-
-model Participant {
-  id           Int      @id @default(autoincrement())
-  tournamentId Int
-  userId       Int? // filled for individual events
-  teamId       Int? // filled for team events
-  seed         Int?
-  joinedAt     DateTime @default(now())
-
-  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  user       User?      @relation(fields: [userId], references: [id])
-  team       Team?      @relation(fields: [teamId], references: [id])
-
-  matchesAsP1 Match[] @relation("MatchP1")
-  matchesAsP2 Match[] @relation("MatchP2")
-  matchesWon  Match[] @relation("MatchWinner")
-  // App invariant: exactly one of userId or teamId is non-null.
-
-  @@index([tournamentId])
-}
-
-model EventRoleAssignment {
-  id           Int       @id @default(autoincrement())
-  tournamentId Int
-  userId       Int
-  role         EventRole
-
-  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  user       User       @relation(fields: [userId], references: [id])
-
-  reviewedReports MatchReport[] @relation("ReviewedByRole")
-
-  @@unique([tournamentId, userId, role])
-}
-
-model Match {
-  id           Int        @id @default(autoincrement())
-  tournamentId Int
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-
-  // Bracket position
-  roundNumber Int? // 1 = first round, 2 = second round, etc.
-  slotIndex   Int? // position within that round
-
-  // Participants (teams or individuals via Participant)
-  p1Id     Int?
-  p2Id     Int?
-  winnerId Int?
-
-  p1     Participant? @relation("MatchP1", fields: [p1Id], references: [id])
-  p2     Participant? @relation("MatchP2", fields: [p2Id], references: [id])
-  winner Participant? @relation("MatchWinner", fields: [winnerId], references: [id])
-
-  p1Score Int?
-  p2Score Int?
-
-  // Check-in system for match readiness
-  checkIn1 Boolean @default(false)
-  checkIn2 Boolean @default(false)
-
-  scheduledAt DateTime?
-  completedAt DateTime?
-  location    String? // free-form location text
-
-  status MatchStatus @default(PENDING)
-
-  // Optional: bracket wiring for single elim
-  nextMatchId Int?
-  nextMatch   Match?  @relation("MatchNext", fields: [nextMatchId], references: [id])
-  children    Match[] @relation("MatchNext")
-
-  createdAt DateTime @default(now())
-
-  reports MatchReport[]
-
-  @@index([tournamentId, roundNumber])
-  @@index([tournamentId, status])
-}
-
-model MatchReport {
-  id                  Int          @id @default(autoincrement())
-  matchId             Int
-  reportedById        Int // user who submitted the result
-  p1Score             Int
-  p2Score             Int
-  winnerParticipantId Int
-  status              ReportStatus @default(PENDING)
-
-  createdAt        DateTime  @default(now())
-  reviewedAt       DateTime?
-  reviewedByRoleId Int? // an EventRoleAssignment row
-
-  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
-
-  // MatchReport ↔ User
-  reportedBy User @relation("ReportedByUser", fields: [reportedById], references: [id])
-
-  // MatchReport ↔ EventRoleAssignment
-  reviewedByRole EventRoleAssignment? @relation("ReviewedByRole", fields: [reviewedByRoleId], references: [id])
+  PUBLIC
+  PRIVATE
 }
 
 enum InvitationStatus {
@@ -218,23 +197,4 @@ enum InvitationStatus {
   ACCEPTED
   DECLINED
   EXPIRED
-}
-
-model Invitation {
-  id            Int    @id @default(autoincrement())
-  tournamentId  Int
-  invitedById   Int // organizer/owner who sent it
-  invitedUserId Int? // if user exists
-  invitedEmail  String // stored even when user does not exist yet
-
-  token  String           @unique
-  status InvitationStatus @default(PENDING)
-
-  createdAt   DateTime  @default(now())
-  respondedAt DateTime?
-
-  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-
-  invitedBy   User  @relation("InvitationsSent", fields: [invitedById], references: [id])
-  invitedUser User? @relation("InvitationsReceived", fields: [invitedUserId], references: [id])
 }

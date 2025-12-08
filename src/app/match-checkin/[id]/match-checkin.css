@@ -1,0 +1,74 @@
+/* =========================================================
+   MATCH CHECK-IN PAGE — CAMPUS ARENA THEME
+   ========================================================= */
+
+/* Primary action button (Check In, Start Match, etc.) */
+.ca-match-btn-primary {
+  border-radius: 999px;
+  padding: 0.75rem 2rem;
+  border: none;
+  background: linear-gradient(135deg, #5b8dff, #a855ff, #ff4fa3);
+  box-shadow: 0 0 20px rgba(104, 129, 255, 0.45);
+  color: #ffffff;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.ca-match-btn-primary:hover {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+}
+
+.ca-match-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Glassmorphism cards */
+.ca-glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+}
+
+.ca-dark-glass-card {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+}
+
+/* Player avatars */
+.ca-player-avatar {
+  width: 120px;
+  height: 120px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 0 auto;
+}
+
+/* Status badges */
+.ca-status-badge-locked {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  padding: 0.75rem 2rem;
+  border-radius: 999px;
+  font-size: 1rem;
+  display: inline-block;
+  font-weight: 500;
+}
+
+.ca-status-badge-checkin {
+  background: rgba(34, 197, 94, 0.2);
+  color: #420d40;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+

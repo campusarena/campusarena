@@ -42,7 +42,7 @@ export default function NavBar() {
               Standings
             </Link>
             <Link href="/match" className="nav-link ca-nav-link">
-              Match
+              Matches
             </Link>
           </Nav>
 

@@ -47,7 +47,7 @@ export default function MatchCheckIn({
       const result = await handleCheckIn(matchId, participantId);
       
       if (result.success) {
-        setMessage({ text: result.message, type: 'success' });
+        setMessage({ text: result.message || 'Check-in successful', type: 'success' });
         setTimeout(() => setMessage(null), 5000);
       } else {
         setMessage({ text: result.error || 'Check-in failed', type: 'danger' });
@@ -60,7 +60,7 @@ export default function MatchCheckIn({
       const result = await handleStartMatch(matchId);
       
       if (result.success) {
-        setMessage({ text: result.message, type: 'success' });
+        setMessage({ text: result.message || 'Match started successfully', type: 'success' });
         setTimeout(() => setMessage(null), 5000);
       } else {
         setMessage({ text: result.error || 'Failed to start match', type: 'danger' });
