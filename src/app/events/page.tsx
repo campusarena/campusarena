@@ -43,21 +43,16 @@ export default async function EventsPage() {
         include: {
           user: true,
           team: true,
-          matchesAsP1: true,
-          matchesAsP2: true,
-          matchesWon: true,
         },
+        orderBy: { seed: 'asc' },
       },
       matches: {
+        include: {
+          p1: { include: { user: true, team: true } },
+          p2: { include: { user: true, team: true } },
+        },
         where: {
-          status: {
-            in: [
-              MatchStatus.PENDING,
-              MatchStatus.SCHEDULED,
-              MatchStatus.READY,
-              MatchStatus.IN_PROGRESS,
-            ],
-          },
+          status: MatchStatus.COMPLETE,
         },
       },
     },
@@ -66,12 +61,34 @@ export default async function EventsPage() {
 
   // Convert DB → UI
   const uiEvents: EventListing[] = tournaments.map((t) => {
-    const standings = t.participants.map((p) => {
-      const gamesPlayed = p.matchesAsP1.length + p.matchesAsP2.length;
-      const wins = p.matchesWon.length;
-      const losses = gamesPlayed - wins;
+    // Build a win/loss map per player (user or team) based only on
+    // COMPLETED matches in this specific tournament.
+    const recordByPlayer = new Map<number, { wins: number; losses: number }>();
 
-      const points = wins * 3;
+    const playerKeyForParticipant = (p: (typeof t.participants)[number]) =>
+      p.userId ?? p.teamId ?? p.id;
+
+    for (const m of t.matches) {
+      if (!m.p1 || !m.p2 || !m.winnerId) continue;
+
+      const p1Key = playerKeyForParticipant(m.p1);
+      const p2Key = playerKeyForParticipant(m.p2);
+
+      const winnerKey = m.winnerId === m.p1.id ? p1Key : p2Key;
+      const loserKey = winnerKey === p1Key ? p2Key : p1Key;
+
+      const winnerRec = recordByPlayer.get(winnerKey) ?? { wins: 0, losses: 0 };
+      winnerRec.wins += 1;
+      recordByPlayer.set(winnerKey, winnerRec);
+
+      const loserRec = recordByPlayer.get(loserKey) ?? { wins: 0, losses: 0 };
+      loserRec.losses += 1;
+      recordByPlayer.set(loserKey, loserRec);
+    }
+
+    const standings = t.participants.map((p) => {
+      const key = playerKeyForParticipant(p);
+      const rec = recordByPlayer.get(key) ?? { wins: 0, losses: 0 };
 
       const name =
         p.team?.name ??
@@ -79,10 +96,15 @@ export default async function EventsPage() {
         p.user?.email ??
         `Seed ${p.seed ?? '?'}`;
 
-      return { team: name, wins, losses, points };
+      return { team: name, wins: rec.wins, losses: rec.losses };
     });
 
-    standings.sort((a, b) => b.points - a.points);
+    // Sort by wins desc, then losses asc, then name.
+    standings.sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (a.losses !== b.losses) return a.losses - b.losses;
+      return a.team.localeCompare(b.team);
+    });
 
     return {
       id: t.id,

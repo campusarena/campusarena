@@ -8,7 +8,6 @@ export interface TeamStanding {
   team: string;
   wins: number;
   losses: number;
-  points: number;
 }
 
 export interface EventListing {
@@ -59,13 +58,14 @@ export default function EventsClient({ events }: EventsClientProps) {
               else {
                 existing.wins += entry.wins;
                 existing.losses += entry.losses;
-                existing.points += entry.points;
               }
             });
 
-            const standings = Array.from(map.values()).sort(
-              (a, b) => b.points - a.points
-            );
+            const standings = Array.from(map.values()).sort((a, b) => {
+              if (b.wins !== a.wins) return b.wins - a.wins;
+              if (a.losses !== b.losses) return a.losses - b.losses;
+              return a.team.localeCompare(b.team);
+            });
 
             return (
               <Col key={event.id} md={10} lg={8}>
@@ -92,7 +92,6 @@ export default function EventsClient({ events }: EventsClientProps) {
                             <th>Team</th>
                             <th className="text-center">W</th>
                             <th className="text-center">L</th>
-                            <th className="text-center">Pts</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -102,7 +101,6 @@ export default function EventsClient({ events }: EventsClientProps) {
                               <td>{team.team}</td>
                               <td className="text-center">{team.wins}</td>
                               <td className="text-center">{team.losses}</td>
-                              <td className="text-center">{team.points}</td>
                             </tr>
                           ))}
                         </tbody>

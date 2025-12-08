@@ -67,6 +67,9 @@ model Tournament {
   format      EventFormat @default(SINGLE_ELIM)
   isTeamBased Boolean     @default(true)
 
+  // If true, brackets are automatically regenerated when participants change.
+  autoBracket Boolean     @default(false)
+
   startDate DateTime
   endDate   DateTime?
   status    String    @default("upcoming")
@@ -121,6 +124,7 @@ model Participant {
   teamId       Int? // filled for team events
   seed         Int?
   joinedAt     DateTime @default(now())
+  checkedIn    Boolean  @default(false)
 
   tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   user       User?      @relation(fields: [userId], references: [id])
