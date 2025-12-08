@@ -33,7 +33,17 @@ type MatchWithRelations = Match & {
 /**
  * Load all dashboard data for a given user.
  */
-export async function getDashboardDataForUser(userId: number): Promise<DashboardData> {
+export async function getDashboardDataForUser(
+  userId: number,
+): Promise<DashboardData> {
+  // 🔹 0. Load the user so we can show their display name
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, email: true },
+  });
+
+  const userName = user?.name ?? user?.email ?? '';
+
   // 1️⃣ Tournaments this user is playing in
   const participantRows = await prisma.participant.findMany({
     where: { userId },
@@ -84,10 +94,7 @@ export async function getDashboardDataForUser(userId: number): Promise<Dashboard
   if (participantIds.length > 0) {
     const upcomingMatchRowsRaw = await prisma.match.findMany({
       where: {
-        OR: [
-          { p1Id: { in: participantIds } },
-          { p2Id: { in: participantIds } },
-        ],
+        OR: [{ p1Id: { in: participantIds } }, { p2Id: { in: participantIds } }],
         status: {
           in: [MatchStatus.PENDING, MatchStatus.SCHEDULED],
         },
@@ -100,7 +107,7 @@ export async function getDashboardDataForUser(userId: number): Promise<Dashboard
       orderBy: { scheduledAt: 'asc' },
     });
 
-    // 🔹 Extra safety filter: only matches where THIS user is p1 or p2
+    // Extra safety: only matches where THIS user is p1 or p2
     const upcomingMatchRows = upcomingMatchRowsRaw.filter(
       (m) =>
         (m.p1 && m.p1.userId === userId) ||
@@ -114,16 +121,13 @@ export async function getDashboardDataForUser(userId: number): Promise<Dashboard
       description: buildMatchDescription(m),
     }));
 
-    // Next matches: just the first 1–2 for the "Your next match" card
+    // Next matches: first 1–2 for a "next match" card (even if you don't use it yet)
     nextMatches = upcomingMatches.slice(0, 2);
 
     // 4️⃣ Recent verified results
     const recentMatchRowsRaw = await prisma.match.findMany({
       where: {
-        OR: [
-          { p1Id: { in: participantIds } },
-          { p2Id: { in: participantIds } },
-        ],
+        OR: [{ p1Id: { in: participantIds } }, { p2Id: { in: participantIds } }],
         status: MatchStatus.VERIFIED,
       },
       include: {
@@ -133,10 +137,10 @@ export async function getDashboardDataForUser(userId: number): Promise<Dashboard
         winner: { include: { user: true, team: true } },
       },
       orderBy: { completedAt: 'desc' },
-      take: 10, // grab a few, then we’ll collapse by tournament
+      take: 10,
     });
 
-    // 🔹 Collapse to one result per tournament (typically the latest match, e.g. final)
+    // Collapse to one recent result per tournament
     const seenTournament = new Set<number>();
     const recentMatchRows: MatchWithRelations[] = [];
     for (const m of recentMatchRowsRaw as MatchWithRelations[]) {
@@ -153,6 +157,7 @@ export async function getDashboardDataForUser(userId: number): Promise<Dashboard
   }
 
   const data: DashboardData = {
+    userName,
     activeEvents,
     upcomingMatches,
     nextMatches,
@@ -166,7 +171,6 @@ export async function getDashboardDataForUser(userId: number): Promise<Dashboard
 // Helper formatting
 // ----------------------
 
-// We only need p1/p2 for upcoming matches.
 type MatchForUpcoming = {
   p1: ParticipantWithUserTeam | null;
   p2: ParticipantWithUserTeam | null;
@@ -175,7 +179,7 @@ type MatchForUpcoming = {
 function displayParticipant(p: ParticipantWithUserTeam | null): string {
   if (!p) return 'TBD';
   if (p.team) return p.team.name;
-  if (p.user) return p.user.email ?? 'Unknown player';
+  if (p.user) return p.user.name ?? p.user.email ?? 'Unknown player';
   return 'TBD';
 }
 
@@ -185,7 +189,6 @@ function buildMatchDescription(match: MatchForUpcoming): string {
   return `${p1} vs ${p2}`;
 }
 
-// For results we do need winner & tournament info.
 function buildResultDescription(match: MatchWithRelations): string {
   const p1 = displayParticipant(match.p1);
   const p2 = displayParticipant(match.p2);
