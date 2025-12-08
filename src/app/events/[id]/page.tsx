@@ -52,13 +52,16 @@ export default async function EventDetailsPage({
     );
   }
 
+  const playerKeyForParticipant = (p: (typeof tournament.participants)[number]) =>
+    p.userId ?? p.teamId ?? p.id;
+
   const participantByPlayer = new Map<
     number,
     (typeof tournament.participants)[number]
   >();
 
   for (const p of tournament.participants) {
-    const key = p.userId ?? p.teamId ?? p.id;
+    const key = playerKeyForParticipant(p);
     const existing = participantByPlayer.get(key);
 
     // Prefer the record that has a non-null seed so the UI
@@ -99,29 +102,24 @@ export default async function EventDetailsPage({
   }));
 
   // Aggregate win/loss record per participant based on VERIFIED matches.
-  const recordByParticipant = new Map<
-    number,
-    { wins: number; losses: number }
-  >();
+  const recordByPlayer = new Map<number, { wins: number; losses: number }>();
 
   for (const m of tournament.matches) {
-    if (!m.winnerId) continue;
+    if (!m.winnerId || !m.p1 || !m.p2) continue;
 
-    const p1Id = m.p1Id ?? undefined;
-    const p2Id = m.p2Id ?? undefined;
+    const p1Key = playerKeyForParticipant(m.p1);
+    const p2Key = playerKeyForParticipant(m.p2);
 
-    if (!p1Id || !p2Id) continue;
+    const winnerKey = m.winnerId === m.p1.id ? p1Key : p2Key;
+    const loserKey = winnerKey === p1Key ? p2Key : p1Key;
 
-    const winnerId = m.winnerId;
-    const loserId = winnerId === p1Id ? p2Id : p1Id;
-
-    const winnerRec = recordByParticipant.get(winnerId) ?? { wins: 0, losses: 0 };
+    const winnerRec = recordByPlayer.get(winnerKey) ?? { wins: 0, losses: 0 };
     winnerRec.wins += 1;
-    recordByParticipant.set(winnerId, winnerRec);
+    recordByPlayer.set(winnerKey, winnerRec);
 
-    const loserRec = recordByParticipant.get(loserId) ?? { wins: 0, losses: 0 };
+    const loserRec = recordByPlayer.get(loserKey) ?? { wins: 0, losses: 0 };
     loserRec.losses += 1;
-    recordByParticipant.set(loserId, loserRec);
+    recordByPlayer.set(loserKey, loserRec);
   }
 
   // Simple organizer check for now: any OWNER or ORGANIZER.
@@ -219,7 +217,7 @@ export default async function EventDetailsPage({
                     <td>{p.user?.name ?? p.team?.name ?? "Unknown"}</td>
                     <td className="text-center">
                       {(() => {
-                        const rec = recordByParticipant.get(p.id);
+                        const rec = recordByPlayer.get(playerKeyForParticipant(p));
                         if (!rec) return '0-0';
                         return `${rec.wins}-${rec.losses}`;
                       })()}
