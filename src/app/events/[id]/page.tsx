@@ -135,10 +135,10 @@ export default async function EventDetailsPage({
         {/* Back to Standings */}
         <div className="mb-4">
           <Link
-            href="/standings"
+            href="/events"
             className="btn btn-sm btn-outline-light ca-glass-button"
           >
-            ← Back to standings
+            ← Back to events
           </Link>
         </div>
 
