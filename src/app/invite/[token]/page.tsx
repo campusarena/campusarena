@@ -1,82 +1,59 @@
 // src/app/invite/[token]/page.tsx
-import { redirect, notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
+import { InvitationStatus } from '@prisma/client';
 import authOptions from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
+import InviteClient from '@/components/InviteClient';
 
-type PageProps = {
+type Props = {
   params: { token: string };
 };
 
-export default async function AcceptInvitePage({ params }: PageProps) {
-  const session = await getServerSession(authOptions);
-  const email = session?.user?.email ?? null;
+export default async function InvitePage({ params }: Props) {
+  const token = params.token;
 
-  // If not logged in, send them to sign-in, then back here.
-  if (!email) {
-    const callbackUrl = encodeURIComponent(`/invite/${params.token}`);
-    redirect(`/auth/signin?callbackUrl=${callbackUrl}`);
+  // 1. Require login; if not logged in, go to sign-in then back to this invite
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    redirect(`/auth/signin?callbackUrl=/invite/${token}`);
   }
 
-  // Look up the invitation by token
-  const invite = await prisma.invitation.findUnique({
-    where: { token: params.token },
+  // 2. Load invitation + tournament
+  const invitation = await prisma.invitation.findUnique({
+    where: { token },
     include: {
       tournament: true,
+      invitedBy: true,
     },
   });
 
-  if (!invite) {
-    return notFound();
+  if (!invitation) {
+    return (
+      <main className="ca-section">
+        <div className="text-center text-white w-100">
+          <h2>Invitation not found</h2>
+          <p>This link might be invalid or expired.</p>
+        </div>
+      </main>
+    );
   }
 
-  // Only allow pending invites
-  if (invite.status !== 'PENDING') {
-    // Later you can render a nicer "Invite already used / expired" page.
-    return notFound();
+  if (invitation.status !== InvitationStatus.PENDING) {
+    return (
+      <main className="ca-section">
+        <div className="text-center text-white w-100">
+          <h2>Invitation already used</h2>
+          <p>Status: {invitation.status}</p>
+        </div>
+      </main>
+    );
   }
 
-  // Safety: make sure the invite was actually sent to this email
-  if (invite.invitedEmail !== email) {
-    // You could show a "this invite isn't for you" page instead.
-    return notFound();
-  }
-
-  // Get or create the user (should already exist, but just in case)
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    // This should basically never happen if auth is working, but be safe:
-    return notFound();
-  }
-
-  // Check if already a participant in this tournament
-  const existingParticipant = await prisma.participant.findFirst({
-    where: {
-      tournamentId: invite.tournamentId,
-      userId: user.id,
-    },
-  });
-
-  if (!existingParticipant) {
-    await prisma.participant.create({
-      data: {
-        tournamentId: invite.tournamentId,
-        userId: user.id,
-        // seed can be set later by organizer
-      },
-    });
-  }
-
-  // Mark invite as accepted
-  await prisma.invitation.update({
-    where: { id: invite.id },
-    data: {
-      status: 'ACCEPTED',
-      respondedAt: new Date(),
-      invitedUserId: user.id,
-    },
-  });
-
-  // Finally, send them to the event page (adjust path to match your routing)
-  redirect(`/events/${invite.tournamentId}`);
+  // 3. Render client-side accept/decline UI
+  return (
+    <main className="ca-section">
+      <InviteClient invitation={invitation} />
+    </main>
+  );
 }

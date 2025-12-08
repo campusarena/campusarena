@@ -47,14 +47,71 @@ export async function deleteStuff(_id: number) {
    AUTH: USERS
    ============================================================ */
 
-export async function createUser(credentials: { email: string; password: string }) {
+/**
+ * Creates a new user in the database.
+ * Throws "EMAIL_TAKEN" or "NAME_TAKEN" for unique violations.
+ */
+export async function createUser(credentials: { email: string; password: string; name: string }) {
   const password = await hash(credentials.password, 10);
-  await prisma.user.create({
-    data: {
-      email: credentials.email,
-      password,
-    },
-  });
+
+  try {
+    await prisma.user.create({
+      data: {
+        email: credentials.email,
+        password,
+        name: credentials.name,
+      },
+    });
+  } catch (err: unknown) {
+    const e = err as { code?: string; meta?: { target?: string[] } };
+
+    if (e.code === 'P2002') {
+      const target = e.meta?.target ?? [];
+      if (target.includes('email')) {
+        throw new Error('EMAIL_TAKEN');
+      }
+      if (target.includes('name')) {
+        throw new Error('NAME_TAKEN');
+      }
+    }
+    throw err;
+  }
+}
+
+/**
+ * Update the logged-in user's profile (name + email).
+ * `currentEmail` is used to locate the user row.
+ * Throws "EMAIL_TAKEN" / "NAME_TAKEN" similar to createUser.
+ */
+export async function updateProfile(data: {
+  currentEmail: string;
+  newEmail: string;
+  name: string;
+}) {
+  const { currentEmail, newEmail, name } = data;
+
+  try {
+    await prisma.user.update({
+      where: { email: currentEmail },
+      data: {
+        email: newEmail,
+        name,
+      },
+    });
+  } catch (err: unknown) {
+    const e = err as { code?: string; meta?: { target?: string[] } };
+
+    if (e.code === 'P2002') {
+      const target = e.meta?.target ?? [];
+      if (target.includes('email')) {
+        throw new Error('EMAIL_TAKEN');
+      }
+      if (target.includes('name')) {
+        throw new Error('NAME_TAKEN');
+      }
+    }
+    throw err;
+  }
 }
 
 export async function changePassword(credentials: { email: string; password: string }) {
