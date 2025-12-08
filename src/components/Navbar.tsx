@@ -22,8 +22,8 @@ export default function NavBar() {
         <Navbar.Collapse id="nav" className="justify-content-end">
           {/* ---------- LEFT NAV LINKS ---------- */}
           <Nav className="me-auto">
-            <Link href="/events" className="nav-link ca-nav-link">
-              Events
+            <Link href="/publicevents" className="nav-link ca-nav-link">
+              Public Events
             </Link>
 
             <Link href="/features" className="nav-link ca-nav-link">
