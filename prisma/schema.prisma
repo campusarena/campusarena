@@ -23,6 +23,9 @@ enum MatchStatus {
   REPORTED
   VERIFIED
   CANCELED
+  READY
+  IN_PROGRESS
+  COMPLETE
 }
 
 enum EventRole {
@@ -171,6 +174,10 @@ model Match {
   location    String? // free-form location text
 
   status MatchStatus @default(PENDING)
+
+  // Issue #60: Match check-in system
+  checkIn1 Boolean @default(false)
+  checkIn2 Boolean @default(false)
 
   // Optional: bracket wiring for single elim
   nextMatchId Int?
