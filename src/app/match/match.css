@@ -1,188 +1,184 @@
 /* =========================================================
-   MATCH PAGE — CAMPUS ARENA THEME
+   MATCH PAGE — DARK CHARCOAL THEME
    ========================================================= */
 
 .match-page {
-  padding-bottom: 40px;
-  background:
-    radial-gradient(circle at top left, rgba(91, 141, 255, 0.25) 0, transparent 55%),
-    radial-gradient(circle at bottom right, rgba(255, 79, 163, 0.22) 0, transparent 55%),
-    #050509;
-  color: #f4f4f8;
+  padding: 2rem 0 4rem;
+  background: radial-gradient(circle at top left, rgba(91, 141, 255, 0.25) 0, transparent 55%),
+              radial-gradient(circle at bottom right, rgba(255, 79, 163, 0.22) 0, transparent 55%),
+              #050509;
   min-height: 100vh;
 }
 
-/* Breadcrumb */
-.breadcrumb-text {
-  font-size: 14px;
-  color: #a9acc9;
-}
-
-/* Title */
+/* Page Header */
 .match-page h1 {
-  font-size: 48px;
-  font-weight: 800;
-  color: #ffffff;
-  text-shadow: 0 0 18px rgba(104, 129, 255, 0.35);
-}
-
-/* VS section */
-.match-vs-section {
-  text-align: center;
-}
-
-.team-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 40px;
-  margin-bottom: 30px;
-}
-
-.team-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-}
-
-.team-name {
-  font-size: 24px;
-  font-weight: 600;
-  color: #dfe1ff;
-}
-
-.team-logo {
-  width: 120px;
-  height: 120px;
-  background: #1a1c2c;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-}
-
-.team-score {
-  font-size: 48px;
-  font-weight: 800;
-  color: #ffffff;
-  text-shadow: 0 0 8px rgba(168, 85, 255, 0.4);
-}
-
-.vs-divider {
-  font-size: 36px;
+  font-size: 2.5rem;
   font-weight: 700;
   color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  margin-bottom: 2rem;
 }
 
-/* Report Score Button → using CA primary gradient */
-.report-score-btn {
-  background: linear-gradient(135deg, #5b8dff, #a855ff, #ff4fa3);
-  border: none;
-  border-radius: 999px;
-  padding: 14px 44px;
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 600;
-  box-shadow: 0 0 18px rgba(104, 129, 255, 0.35);
+/* Match Cards Container */
+.match-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
 }
 
-.report-score-btn:hover {
-  filter: brightness(1.08);
-}
-
-/* =========================================================
-   MATCH DETAILS + STANDINGS CARDS
-   ========================================================= */
-
-.match-details-card,
-.standings-table-wrapper {
+/* Individual Match Card */
+.match-card {
   background: #101116;
   border-radius: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 24px;
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.55),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  transition: transform 0.25s, box-shadow 0.25s;
+  overflow: hidden;
 }
 
-.match-details-card h4 {
-  font-size: 18px;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 16px;
+.match-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
 }
 
-/* Rows */
-.detail-row {
-  display: flex;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.detail-row:last-child {
-  border-bottom: none;
-}
-
-.detail-label {
-  font-weight: 600;
-  min-width: 150px;
-  color: #d0d2f5;
-}
-
-.detail-value {
-  color: #c4c6dd;
-}
-
-/* =========================================================
-   Standings Table
-   ========================================================= */
-.standings-title {
-  font-size: 42px;
-  font-weight: 800;
-  color: #ffffff;
-  text-shadow: 0 0 18px rgba(91, 141, 255, 0.28);
-}
-
-.standings-table thead th {
-  font-size: 12px;
-  font-weight: 600;
-  color: #b7bad6;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 12px 16px;
-  background: #181924;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.standings-table tbody td {
-  font-size: 16px;
-  color: #f4f4f8;
-  padding: 16px;
+/* Match Card Header */
+.match-card-header {
+  padding: 1rem;
+  background: #0a0b0f;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.standings-table tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.team-cell {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
 }
 
-.team-icon {
-  width: 36px;
-  height: 36px;
-  background: #1a1c2c;
+.tournament-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #d5d7e5;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* Match Card Body */
+.match-card-body {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  background: #101116;
+}
+
+.player-name {
+  font-weight: 600;
+  color: #f4f4f8;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.vs-text {
+  color: #a9acc9;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.check-in-icon {
+  color: #4ade80;
+  font-size: 1rem;
+}
+
+/* Winner Badge */
+.winner-badge {
+  background: rgba(34, 197, 94, 0.15);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* Match Card Footer */
+.match-card-footer {
+  padding: 1rem;
+  background: #0a0b0f;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.match-action-btn {
+  width: 100%;
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  transition: all 0.2s;
+  border: none;
+  background: linear-gradient(135deg, #5b8dff, #a855ff, #ff4fa3);
+  box-shadow: 0 0 20px rgba(104, 129, 255, 0.45);
+  color: #ffffff;
+}
+
+.match-action-btn:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(104, 129, 255, 0.5);
+}
+
+/* Empty State */
+.empty-state {
+  background: #101116;
+  border-radius: 1rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  opacity: 0.3;
+  color: #a9acc9;
+}
+
+.empty-state h5 {
+  color: #f4f4f8;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+  color: #a9acc9;
+  margin: 0;
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 3rem;
+  color: #f4f4f8;
 }
 
 /* =========================================================
    RESPONSIVE
    ========================================================= */
 
+@media (max-width: 768px) {
+  .match-page h1 {
+    font-size: 2rem;
+  }
+
+  .match-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .player-name {
+    font-size: 0.875rem;
+  }
+}
 @media (max-width: 991px) {
   .team-container {
     flex-direction: column;

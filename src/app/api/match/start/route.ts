@@ -41,13 +41,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 });
     }
 
-    // Validation: Can only start if status is READY
-    if (match.status !== MatchStatus.READY) {
+    // Validation: Can only start if status is SCHEDULED
+    if (match.status !== MatchStatus.SCHEDULED) {
       return NextResponse.json(
         { 
-          error: `Cannot start match. Current status is ${match.status}. Match must be READY to start.`,
+          error: `Cannot start match. Current status is ${match.status}. Match must be SCHEDULED to start.`,
           currentStatus: match.status,
-          requiredStatus: 'READY'
+          requiredStatus: 'SCHEDULED'
         },
         { status: 400 }
       );
