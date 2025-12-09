@@ -4,7 +4,6 @@
 import { useMemo, useState } from 'react';
 import { Row, Col, Card, Badge, Form } from 'react-bootstrap';
 import Link from 'next/link';
-import BackButton from "@/components/BackButton";
 
 export type PublicEventCardData = {
   id: number;
@@ -62,7 +61,6 @@ export default function PublicEventsClient({ events }: Props) {
 
   return (
     <>
-
       {/* Sort controls */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <span className="ca-section-subtitle">
