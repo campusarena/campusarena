@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import PublicEventsClient, {
   type PublicEventCardData,
 } from '@/app/publicevents/PublicEventsClient';
+import BackButton from "@/components/BackButton";
 
 export default async function EventsPage() {
   // Grab all public tournaments
@@ -36,6 +37,9 @@ export default async function EventsPage() {
   return (
     <section className="ca-section">
       <Container>
+        <div className="mb-3">
+        <BackButton />
+        </div>
         <h1 className="fw-bold text-white mb-2">Browse Events</h1>
         <p className="ca-section-subtitle mb-4">
           View public tournaments, leagues, and upcoming competitions.

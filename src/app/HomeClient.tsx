@@ -45,7 +45,7 @@ export default function HomeClient({ upcomingEvents }: { upcomingEvents: Landing
                   size="lg"
                   variant="outline-light"
                   className="ca-cta-secondary"
-                  onClick={() => router.push("/events")}
+                  onClick={() => router.push("/publicevents")}
                 >
                   Browse public events
                 </Button>
