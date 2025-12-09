@@ -3,6 +3,7 @@
 // src/app/create-event/page.tsx
 import { Container, Row, Col, Card, Form, Button } from 'react-bootstrap';
 import { createTournamentAction } from '@/lib/eventActions';
+import BackButton from "@/components/BackButton";
 
 export const dynamic = 'force-dynamic'; // avoid caching issues while developing
 
@@ -10,6 +11,8 @@ export default function CreateEventPage() {
   return (
     <main>
       <Container className="py-5">
+        <BackButton label="← Back" fallbackHref="/dashboard" />
+
         <Row className="justify-content-center">
           <Col md={7} lg={6}>
             <Card className="ca-auth-card">

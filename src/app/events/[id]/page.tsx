@@ -8,6 +8,7 @@ import { CheckInButton } from './CheckInButton';
 import ParticipantsTable from './ParticipantsTable';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/authOptions';
+import BackButton from "@/components/BackButton";
 
 interface EventDetailsParams {
   id: string;
@@ -48,12 +49,10 @@ export default async function EventDetailsPage({
       <section className="ca-standings-page">
         <div className="container py-5 text-white">
           <h1>Event not found</h1>
-          <Link
-            href="/standings"
-            className="btn btn-sm btn-outline-light ca-glass-button mt-3"
-          >
-            ← Back to standings
-          </Link>
+          <BackButton
+            label="← Back"
+            fallbackHref="/publicevents"
+          />
         </div>
       </section>
     );
@@ -147,22 +146,20 @@ export default async function EventDetailsPage({
   return (
     <section className="ca-standings-page">
       <div className="container py-5">
-        {/* Back to Standings */}
-        <div className="mb-4">
-          <Link
-            href="/events"
-            className="btn btn-sm btn-outline-light ca-glass-button"
-          >
-            ← Back to events
-          </Link>
-        </div>
+        {/* Back Button */}
+      <div className="mb-4">
+        <BackButton
+          label="← Back"
+          fallbackHref="/events"
+        />
+      </div>
 
         {/* Page header – match Standings look */}
         <div className="row mb-5 text-center">
           <div className="col">
             <h1 className="fw-bold text-white mb-2">{tournament.name}</h1>
             <p className="ca-section-subtitle">{tournament.game}</p>
-          </div>
+          </div>  
         </div>
 
         {/* Event Info */}

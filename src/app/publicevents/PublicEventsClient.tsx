@@ -24,6 +24,7 @@ type Props = {
   events: PublicEventCardData[];
 };
 
+
 export default function PublicEventsClient({ events }: Props) {
   const [sortBy, setSortBy] = useState<SortBy>('date');
 

@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import authOptions from '@/lib/authOptions';
 import JoinClient from '@/components/JoinClient';
-import Link from 'next/link';
+import BackButton from "@/components/BackButton";
 
 export default async function JoinPage() {
   const session = await getServerSession(authOptions);
@@ -18,14 +18,9 @@ export default async function JoinPage() {
         <div className="w-100" style={{ maxWidth: "500px" }}>
 
           {/* Back button aligned to card’s left edge */}
-          <div className="mb-3">
-            <Link
-              href="/dashboard"
-              className="btn btn-sm btn-outline-light ca-glass-button"
-            >
-              ← Back to Dashboard
-            </Link>
-          </div>
+<div className="mb-3">
+  <BackButton />
+</div>
 
           {/* Centered Join Card */}
           <JoinClient />
