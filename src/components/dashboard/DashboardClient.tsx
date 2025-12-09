@@ -75,12 +75,18 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                     <h2 className="h5 mb-3 text-white">Active Events</h2>
 
                     {activeEvents.map((ev) => (
-                      <Card key={ev.id} className="ca-event-card mb-2">
-                        <Card.Body>
-                          <div className="fw-semibold text-white">{ev.name}</div>
-                          <div className="text-secondary small">{ev.kind}</div>
-                        </Card.Body>
-                      </Card>
+                      <Link
+                        key={ev.id}
+                        href={`/events/${ev.id}`}
+                        className="text-decoration-none"
+                      >
+                        <Card className="ca-event-card mb-2" role="link">
+                          <Card.Body>
+                            <div className="fw-semibold text-white">{ev.name}</div>
+                            <div className="text-secondary small">{ev.kind}</div>
+                          </Card.Body>
+                        </Card>
+                      </Link>
                     ))}
 
                     {activeEvents.length === 0 && (
