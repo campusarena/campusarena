@@ -98,6 +98,7 @@ export async function sendEventInvite(tournamentId: number, email: string) {
 
 /**
  * Accept an invitation: link this user and add them as Participant (if not already).
+ * Invitations are now reusable - multiple users can join with the same code.
  */
 export async function acceptInvitation(token: string) {
   const { id: userId } = await requireUser();
@@ -110,9 +111,10 @@ export async function acceptInvitation(token: string) {
     throw new Error('Invitation not found.');
   }
 
-  if (invitation.status !== InvitationStatus.PENDING) {
-    throw new Error('This invitation is no longer valid.');
-  }
+  // Remove single-use restriction - invitations can be used multiple times
+  // if (invitation.status !== InvitationStatus.PENDING) {
+  //   throw new Error('This invitation is no longer valid.');
+  // }
 
   // Optional: enforce email match
   // const session = await getServerSession(authOptions);
@@ -128,31 +130,34 @@ export async function acceptInvitation(token: string) {
     },
   });
 
-  if (!existingParticipant) {
-    // Auto-assign next available seed when a player joins via invite.
-    const maxSeedRow = await prisma.participant.findFirst({
-      where: { tournamentId: invitation.tournamentId },
-      orderBy: { seed: 'desc' },
-      select: { seed: true },
-    });
-
-    const nextSeed = (maxSeedRow?.seed ?? 0) + 1;
-
-    await prisma.participant.create({
-      data: {
-        tournamentId: invitation.tournamentId,
-        userId,
-        seed: nextSeed,
-      },
-    });
+  if (existingParticipant) {
+    throw new Error('You are already a participant in this tournament.');
   }
 
+  // Auto-assign next available seed when a player joins via invite.
+  const maxSeedRow = await prisma.participant.findFirst({
+    where: { tournamentId: invitation.tournamentId },
+    orderBy: { seed: 'desc' },
+    select: { seed: true },
+  });
+
+  const nextSeed = (maxSeedRow?.seed ?? 0) + 1;
+
+  await prisma.participant.create({
+    data: {
+      tournamentId: invitation.tournamentId,
+      userId,
+      seed: nextSeed,
+    },
+  });
+
+  // Update invitation to track latest usage, but keep it reusable
   await prisma.invitation.update({
     where: { token },
     data: {
       status: InvitationStatus.ACCEPTED,
-      invitedUserId: userId,
       respondedAt: new Date(),
+      // Note: invitedUserId is not updated to allow reuse by multiple users
     },
   });
 }
