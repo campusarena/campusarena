@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { test as authedTest } from './auth-utils';
 
 test.describe('Public site pages', () => {
   test('home shows hero and upcoming events preview', async ({ page }) => {
@@ -30,5 +31,22 @@ test.describe('Public site pages', () => {
       .locator('.ca-event-card')
       .filter({ hasText: 'Bracket Generation Test' });
     await expect(bracketCards.first()).toBeVisible();
+
+    // Seed also creates a PRIVATE tournament that player1 is registered in.
+    // The public browse page must NOT show it.
+    await expect(page.getByText('Private Invite Only Event')).toHaveCount(0);
+  });
+
+  authedTest('public events page shows ONLY public events (even when logged in)', async ({ getUserPage }) => {
+    const page = await getUserPage('player1@campusarena.test', 'password123');
+    await page.goto('/publicevents');
+
+    await expect(page.getByRole('heading', { name: 'Browse Events' })).toBeVisible();
+    await expect(
+      page.locator('.ca-event-card').filter({ hasText: 'Test Smash Bracket' }),
+    ).toBeVisible();
+
+    // Player1 is registered for this private event, but it must not appear.
+    await expect(page.getByText('Private Invite Only Event')).toHaveCount(0);
   });
 });
