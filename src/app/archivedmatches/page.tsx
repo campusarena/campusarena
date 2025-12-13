@@ -3,7 +3,7 @@ import Container from 'react-bootstrap/Container';
 import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import { EventRole, MatchStatus, Role } from '@prisma/client';
+import { MatchStatus } from '@prisma/client';
 import authOptions from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 
@@ -29,8 +29,6 @@ export default async function ArchivedMatchesPage() {
     redirect('/auth/signin');
   }
 
-  const isAdmin = currentUser.role === Role.ADMIN;
-
   const userParticipants = await prisma.participant.findMany({
     where: {
       OR: [
@@ -54,24 +52,7 @@ export default async function ArchivedMatchesPage() {
   const matches = await prisma.match.findMany({
     where: {
       status: { in: [MatchStatus.COMPLETE, MatchStatus.VERIFIED] },
-      ...(isAdmin
-        ? {}
-        : {
-            OR: [
-              { p1Id: { in: participantIds } },
-              { p2Id: { in: participantIds } },
-              {
-                tournament: {
-                  staff: {
-                    some: {
-                      userId: currentUser.id,
-                      role: { in: [EventRole.OWNER, EventRole.ORGANIZER] },
-                    },
-                  },
-                },
-              },
-            ],
-          }),
+      OR: [{ p1Id: { in: participantIds } }, { p2Id: { in: participantIds } }],
     },
     include: {
       tournament: { select: { id: true, name: true } },

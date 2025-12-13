@@ -16,6 +16,17 @@ export default async function AdminEventsPage({
   const qAsNumber = q ? Number(q) : NaN;
   const qIsNumber = q ? Number.isFinite(qAsNumber) : false;
 
+  const where =
+    q === null
+      ? undefined
+      : {
+          OR: [
+            ...(qIsNumber ? [{ id: qAsNumber }] : []),
+            { name: { contains: q, mode: 'insensitive' as const } },
+            { game: { contains: q, mode: 'insensitive' as const } },
+          ],
+        };
+
   const tournaments = await prisma.tournament.findMany({
     select: {
       id: true,
@@ -27,16 +38,7 @@ export default async function AdminEventsPage({
       endDate: true,
       _count: { select: { participants: true, staff: true } },
     },
-    where:
-      q === null
-        ? undefined
-        : {
-            OR: [
-              ...(qIsNumber ? [{ id: qAsNumber }] : []),
-              { name: { contains: q, mode: 'insensitive' } },
-              { game: { contains: q, mode: 'insensitive' } },
-            ],
-          },
+    where,
     orderBy: [{ createdAt: 'desc' }],
   });
 
