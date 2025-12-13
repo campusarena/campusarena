@@ -113,8 +113,6 @@ model Match {
   roundNumber  Int?
   slotIndex    Int?
   status       MatchStatus   @default(PENDING)
-  checkIn1     Boolean       @default(false)
-  checkIn2     Boolean       @default(false)
   nextMatch    Match?        @relation("MatchNext", fields: [nextMatchId], references: [id])
   children     Match[]       @relation("MatchNext")
   p1           Participant?  @relation("MatchP1", fields: [p1Id], references: [id])

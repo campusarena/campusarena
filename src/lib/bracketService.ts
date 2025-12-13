@@ -31,11 +31,13 @@ export async function regenerateSingleElimBracket(tournamentId: number) {
     throw new Error('Tournament not found');
   }
 
+  const participants = tournament.participants.filter((p) => p.checkedIn);
+  if (participants.length === 0) {
+    throw new Error('No checked-in participants to seed into the bracket');
+  }
+
   // Delete existing matches for this tournament so we can regenerate
   await prisma.match.deleteMany({ where: { tournamentId } });
-
-  const participants = tournament.participants;
-  if (participants.length === 0) return;
 
   const N = participants.length;
   const rounds: { p1Id: number | null; p2Id: number | null }[][] = [];

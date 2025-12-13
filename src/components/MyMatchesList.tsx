@@ -7,8 +7,6 @@ import Link from 'next/link';
 interface Match {
   id: number;
   status: string;
-  checkIn1: boolean;
-  checkIn2: boolean;
   roundNumber: number | null;
   tournament: {
     name: string;
@@ -129,16 +127,10 @@ export default function MyMatchesList() {
                 <div className="text-center mb-3">
                   <div className="mb-2">
                     <strong className="text-truncate d-block" style={{ color: '#f4f4f8' }}>{player1Name}</strong>
-                    {match.checkIn1 && (
-                      <i className="bi bi-check-circle-fill" style={{ color: '#4ade80' }}></i>
-                    )}
                   </div>
                   <div className="small mb-2" style={{ color: '#a9acc9' }}>VS</div>
                   <div>
                     <strong className="text-truncate d-block" style={{ color: '#f4f4f8' }}>{player2Name}</strong>
-                    {match.checkIn2 && (
-                      <i className="bi bi-check-circle-fill" style={{ color: '#4ade80' }}></i>
-                    )}
                   </div>
                 </div>
 
@@ -164,7 +156,7 @@ export default function MyMatchesList() {
                 borderTop: '1px solid rgba(255, 255, 255, 0.06)'
               }}>
                 <Link 
-                  href={`/match-checkin/${match.id}`} 
+                  href={`/match/${match.id}`} 
                   className="btn btn-sm w-100"
                   style={{
                     borderRadius: '999px',
@@ -176,27 +168,10 @@ export default function MyMatchesList() {
                     padding: '0.5rem 1rem'
                   }}
                 >
-                  {match.status === 'PENDING' && !match.checkIn1 && !match.checkIn2 ? (
-                    <>
-                      <i className="bi bi-box-arrow-in-right me-2"></i>
-                      Check In
-                    </>
-                  ) : match.status === 'READY' ? (
-                    <>
-                      <i className="bi bi-play-fill me-2"></i>
-                      Start Match
-                    </>
-                  ) : match.status === 'IN_PROGRESS' ? (
-                    <>
-                      <i className="bi bi-controller me-2"></i>
-                      View Match
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-eye me-2"></i>
-                      View Details
-                    </>
-                  )}
+                  <>
+                    <i className="bi bi-eye me-2"></i>
+                    View Match
+                  </>
                 </Link>
               </div>
             </div>

@@ -8,6 +8,7 @@ import ParticipantsTable from './ParticipantsTable';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/authOptions';
 import BackButton from "@/components/BackButton";
+import { CheckInButton } from './CheckInButton';
 
 interface EventDetailsParams {
   id: string;
@@ -146,8 +147,7 @@ export default async function EventDetailsPage({
     ? tournament.participants.find((p) => p.userId === currentUserId)
     : undefined;
   const isParticipant = !!currentUserParticipant;
-  // REMOVE THIS LINE - checkedIn property doesn't exist in Participant model:
-  // const isCheckedIn = !!currentUserParticipant?.checkedIn;
+  const isCheckedIn = !!currentUserParticipant?.checkedIn;
 
   return (
     <section className="ca-standings-page">
@@ -205,12 +205,20 @@ export default async function EventDetailsPage({
             </form>
           )}
 
-          {/* Simplified participant message - removed event-level check-in logic */}
           {isParticipant && (
             <div className="mt-3">
-              <p className="text-light small mb-0">
-                You are registered for this event. Check in to individual matches when they&apos;re ready.
-              </p>
+              {isCheckedIn ? (
+                <p className="text-light small mb-0">
+                  You are registered and checked in for this event.
+                </p>
+              ) : (
+                <>
+                  <p className="text-light small mb-0">
+                    You are registered for this event. Check in to be seeded into the bracket.
+                  </p>
+                  <CheckInButton tournamentId={tournament.id} />
+                </>
+              )}
             </div>
           )}
         </div>

@@ -1,7 +1,7 @@
 # Match Status System Documentation
 
 ## Overview
-This system manages the lifecycle of tournament matches from check-in through completion, with automatic state transitions and validation rules.
+This system manages the lifecycle of tournament matches through completion, with automatic state transitions and validation rules.
 
 ## Match Status Flow
 
@@ -13,8 +13,8 @@ PENDING → READY → IN_PROGRESS → COMPLETE
 
 ### Status Definitions
 
-- **PENDING**: Initial state. Waiting for both participants to check in.
-- **READY**: Both participants have checked in. Match can be started.
+- **PENDING**: Initial state.
+- **READY**: Match can be started.
 - **IN_PROGRESS**: Match is actively being played.
 - **COMPLETE**: Match has finished. Winner is recorded.
 - **CANCELED**: Match was canceled (can happen from any state).
@@ -35,59 +35,12 @@ enum MatchStatus {
 }
 ```
 
-### Match Model (New Fields)
-```prisma
-model Match {
-  // ... existing fields ...
-  
-  checkIn1 Boolean @default(false)  // ✨ NEW
-  checkIn2 Boolean @default(false)  // ✨ NEW
-  
-  status MatchStatus @default(PENDING)
-  winnerId Int? // Already optional
-}
-```
+### Match Model
+Match status is stored on the `Match.status` field.
 
 ## API Endpoints
 
-### 1. Check-In: `POST /api/match/check-in`
-
-Allows a participant to check in for a match.
-
-**Request Body:**
-```json
-{
-  "matchId": 123,
-  "participantId": 456
-}
-```
-
-**Success Response:**
-```json
-{
-  "success": true,
-  "message": "Check-in successful. Waiting for other player.",
-  "match": { /* match data */ }
-}
-```
-
-**When Both Check In:**
-```json
-{
-  "success": true,
-  "message": "Both players checked in. Match is now READY!",
-  "match": { /* match with status: "READY" */ }
-}
-```
-
-**Validation Rules:**
-- Cannot check in if match is `IN_PROGRESS` or `COMPLETE`
-- Cannot check in twice
-- Must be a participant in the match
-
----
-
-### 2. Start Match: `POST /api/match/start`
+### 1. Start Match: `POST /api/match/start`
 
 Starts a match that is ready.
 
@@ -109,7 +62,6 @@ Starts a match that is ready.
 
 **Validation Rules:**
 - Can only start if status is `READY`
-- Requires both players to have checked in first
 
 ---
 
@@ -153,16 +105,6 @@ Completes a match and records the winner.
 
 Located in `src/lib/matchStatusHelpers.ts`
 
-### `updateCheckIn(matchId, participantId)`
-Updates check-in and auto-transitions to READY when both players check in.
-
-```typescript
-const result = await updateCheckIn(123, 456);
-if (result.bothCheckedIn) {
-  console.log('Match is ready!');
-}
-```
-
 ### `startMatch(matchId)`
 Starts a match. Throws error if not in READY state.
 
@@ -180,14 +122,6 @@ Completes a match with winner and optional scores.
 
 ```typescript
 const match = await completeMatch(123, 456, 21, 15);
-```
-
-### `areBothPlayersCheckedIn(matchId)`
-Checks if both participants have checked in.
-
-```typescript
-const ready = await areBothPlayersCheckedIn(123);
-// Returns: true/false
 ```
 
 ### `validateMatchTransition(currentStatus, targetStatus)`
@@ -220,13 +154,10 @@ console.log({
 
 ### Step 1: Apply Schema Changes
 ```bash
-npx prisma migrate dev --name add_match_check_in_system
+npx prisma migrate dev
 ```
 
-This will:
-- Add `checkIn1` and `checkIn2` fields to Match model
-- Add `READY`, `IN_PROGRESS`, `COMPLETE` to MatchStatus enum
-- All existing matches keep their current status
+This will apply the current Prisma schema, including the `MatchStatus` enum updates.
 
 ### Step 2: Coordinate with Team
 Important: Your teammates need to:
@@ -234,39 +165,12 @@ Important: Your teammates need to:
 2. Run `npx prisma migrate dev` to apply the migration
 3. Run `npx prisma generate` to update Prisma Client
 
-### Step 3: No Breaking Changes
-The changes are additive only:
-- New enum values don't break existing code
-- New boolean fields default to `false`
-- Existing matches continue to work
-- No data loss
+### Step 3: Notes
+These changes may include additive and/or removal migrations depending on your branch history.
 
 ---
 
 ## Usage Examples
-
-### Frontend Example: Check-In Flow
-
-```typescript
-// Player checks in
-const checkIn = async (matchId: number, participantId: number) => {
-  const response = await fetch('/api/match/check-in', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ matchId, participantId })
-  });
-  
-  const data = await response.json();
-  
-  if (data.success) {
-    if (data.match.status === 'READY') {
-      alert('Both players ready! Match can start!');
-    } else {
-      alert('Checked in. Waiting for opponent...');
-    }
-  }
-};
-```
 
 ### Frontend Example: Start Match
 
@@ -319,8 +223,7 @@ const completeMatch = async (
 
 | Action | Required Status | Conditions |
 |--------|----------------|------------|
-| Check-in | `PENDING` or `READY` | - Cannot check in if already checked in<br>- Cannot check in if `IN_PROGRESS` or `COMPLETE` |
-| Start | `READY` | - Both players must be checked in<br>- Status must be exactly `READY` |
+| Start | `READY` | - Status must be exactly `READY` |
 | Complete | `IN_PROGRESS` | - Winner must be a participant<br>- Status must be exactly `IN_PROGRESS` |
 
 ---
