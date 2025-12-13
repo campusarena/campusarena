@@ -6,6 +6,11 @@ import { Container, Row, Col, Form, Button, Badge, Breadcrumb } from 'react-boot
 import Link from 'next/link';
 import './match.css';
 
+type Feedback = {
+  variant: 'success' | 'danger' | 'info';
+  message: string;
+};
+
 interface PendingMatch {
   id: number;
   p1Score: number;
@@ -48,6 +53,7 @@ export default function MatchClient({
   const [team2Name, setTeam2Name] = useState(initialTeam2 || 'Team / Player 2');
   const [team1Score, setTeam1Score] = useState(initialP1Score ?? 0);
   const [team2Score, setTeam2Score] = useState(initialP2Score ?? 0);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [isLocked, setIsLocked] = useState(
     matchStatus === 'REPORTED' || matchStatus === 'VERIFIED',
   );
@@ -76,10 +82,14 @@ export default function MatchClient({
 
   const handleSubmitMatch = async () => {
     if (!team1Name || !team2Name || team1Score === team2Score) {
-      alert('Please enter valid team names and scores (no ties allowed)');
+      setFeedback({
+        variant: 'danger',
+        message: 'Please enter valid team names and scores (no ties allowed).',
+      });
       return;
     }
     try {
+      setFeedback(null);
       // Tell the server which side won; it will map this to the
       // correct Participant.id based on p1Id / p2Id.
       const winnerSide = team1Score > team2Score ? 'P1' : 'P2';
@@ -98,7 +108,10 @@ export default function MatchClient({
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        alert(data.error || 'Failed to submit match report');
+        setFeedback({
+          variant: 'danger',
+          message: data.error || 'Failed to submit match report.',
+        });
         return;
       }
 
@@ -113,13 +126,18 @@ export default function MatchClient({
       setPendingReport(localReport);
       setIsLocked(true);
 
-      alert(
-        data.message ||
+      setFeedback({
+        variant: 'success',
+        message:
+          data.message ||
           'Match result submitted successfully. Waiting for organizer verification.',
-      );
+      });
     } catch (err) {
       console.error('Error submitting match report', err);
-      alert('Unexpected error submitting match report');
+      setFeedback({
+        variant: 'danger',
+        message: 'Unexpected error submitting match report.',
+      });
     }
   };
 
@@ -158,6 +176,15 @@ export default function MatchClient({
             <p className="ca-section-subtitle mb-4">
               {team1Name} vs {team2Name}
             </p>
+
+            {feedback && (
+              <div
+                className={`alert alert-${feedback.variant} py-2`}
+                role="alert"
+              >
+                {feedback.message}
+              </div>
+            )}
 
             {/* Match Status Badge */}
             {isLocked && (
@@ -297,10 +324,17 @@ export default function MatchClient({
                       });
                       const data = await res.json();
                       if (!res.ok || !data.success) {
-                        alert(data.error || 'Failed to verify match report');
+                        setFeedback({
+                          variant: 'danger',
+                          message: data.error || 'Failed to verify match report.',
+                        });
                         return;
                       }
-                      alert(data.message || 'Match result verified successfully');
+                      setFeedback({
+                        variant: 'success',
+                        message:
+                          data.message || 'Match result verified successfully.',
+                      });
                     }}
                   >
                     Verify Match Result
@@ -316,10 +350,16 @@ export default function MatchClient({
                       });
                       const data = await res.json();
                       if (!res.ok || !data.success) {
-                        alert(data.error || 'Failed to reject match report');
+                        setFeedback({
+                          variant: 'danger',
+                          message: data.error || 'Failed to reject match report.',
+                        });
                         return;
                       }
-                      alert(data.message || 'Match result rejected');
+                      setFeedback({
+                        variant: 'info',
+                        message: data.message || 'Match result rejected.',
+                      });
                       // Clear local pending state so the form can be edited again.
                       setPendingReport(null);
                       setIsLocked(false);

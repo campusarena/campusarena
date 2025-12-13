@@ -2,30 +2,32 @@ import { test, expect } from './auth-utils';
 
 test.slow();
 test('test access to admin page', async ({ getUserPage }) => {
-  // Call the getUserPage fixture with admin signin info to get authenticated session for admin
-  const adminPage = await getUserPage('admin@foo.com', 'changeme');
+  // Authenticate as seeded admin user
+  const adminPage = await getUserPage('admin@campusarena.test', 'password123');
 
-  // Navigate to the home adminPage
-  await adminPage.goto('http://localhost:3000/');
-  
-  // Check for navigation elements
-  await expect(adminPage.getByRole('link', { name: 'Next.js Application Template' })).toBeVisible();
-  await expect(adminPage.getByRole('link', { name: 'Add Stuff' })).toBeVisible();
-  await expect(adminPage.getByRole('link', { name: 'List Stuff' })).toBeVisible();
-  await expect(adminPage.getByRole('link', { name: 'Admin' })).toBeVisible();
-  await expect(adminPage.getByRole('button', { name: 'admin@foo.com' })).toBeVisible();
-  
-  // Test Add Stuff adminPage
-  await adminPage.getByRole('link', { name: 'Add Stuff' }).click();
-  await expect(adminPage.getByRole('heading', { name: 'Add Stuff' })).toBeVisible();
-  
-  // Test List Stuff adminPage
-  await adminPage.getByRole('link', { name: 'List Stuff' }).click();
-  await expect(adminPage.getByRole('heading', { name: 'Stuff' })).toBeVisible();
-  
-  // Test Admin adminPage
-  await adminPage.getByRole('link', { name: 'Admin' }).click();
-  await expect(adminPage.getByRole('heading', { name: 'List Stuff Admin' })).toBeVisible();
-  await expect(adminPage.getByRole('heading', { name: 'List Users Admin' })).toBeVisible();
+  // Navigate to the home page
+  await adminPage.goto('/');
 
+  // Check for navigation elements in the CampusArena navbar
+  await expect(adminPage.getByRole('link', { name: 'CampusArena' })).toBeVisible();
+  await expect(adminPage.getByRole('link', { name: 'Public Events' })).toBeVisible();
+  await expect(adminPage.getByRole('link', { name: 'Dashboard' })).toBeVisible();
+
+  // Admin dropdown with email should be visible somewhere on the page
+  await expect(adminPage.getByText('admin@campusarena.test')).toBeVisible();
+
+  // Admin dashboard should be accessible
+  // Some dev-server refreshes can interrupt navigation, so retry once.
+  let navigated = false;
+  for (let attempt = 0; attempt < 2 && !navigated; attempt += 1) {
+    try {
+      await adminPage.goto('/admin');
+      navigated = true;
+    } catch (e) {
+      if (attempt === 1) throw e;
+      await adminPage.waitForTimeout(500);
+    }
+  }
+
+  await expect(adminPage.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible();
 });

@@ -12,20 +12,24 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './tests/global-setup',
   /* Run tests in files in parallel */
-  fullyParallel: true,
+  // Next.js dev server can be flaky under heavy parallel load (Fast Refresh / webpack cache).
+  // Keep this conservative so local runs are reliable.
+  fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  // Also keep local runs single-worker for stability.
+  workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    // baseURL: 'http://127.0.0.1:3000',
+    baseURL: 'http://localhost:3000',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -71,8 +75,17 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run dev',
-    url: 'http://127.0.0.1:3000',
+    // Use production server for E2E stability (avoids dev-server webpack cache / fast-refresh flake).
+    command: 'npm run build && npm run start -- -p 3000',
+    url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
+    timeout: 120000,
+    env: {
+      ...process.env,
+      // NextAuth requires a secret in production (`next start`).
+      // CI runners typically don't provide one, so set a stable test-only secret.
+      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ?? 'playwright-test-secret',
+      NEXTAUTH_URL: process.env.NEXTAUTH_URL ?? 'http://localhost:3000',
+    },
   },
 });
