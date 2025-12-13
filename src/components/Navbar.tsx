@@ -7,6 +7,9 @@ import { useSession, signOut } from "next-auth/react";
 export default function NavBar() {
   const { data: session } = useSession();
   const userEmail = session?.user?.email;
+  const isAdmin =
+    (session as unknown as { user?: { randomKey?: string } } | null)?.user
+      ?.randomKey === 'ADMIN';
 
   return (
     <Navbar expand="lg" className="ca-glass-nav">
@@ -75,6 +78,20 @@ export default function NavBar() {
                 id="user-dropdown"
                 className="ca-nav-dropdown"
               >
+                {isAdmin && (
+                  <>
+                    <NavDropdown.Item as={Link} href="/admin">
+                      Admin Dashboard
+                    </NavDropdown.Item>
+                    <NavDropdown.Item as={Link} href="/admin/users">
+                      Admin Users
+                    </NavDropdown.Item>
+                    <NavDropdown.Item as={Link} href="/admin/events">
+                      Admin Events
+                    </NavDropdown.Item>
+                    <NavDropdown.Divider />
+                  </>
+                )}
                 <NavDropdown.Item as={Link} href="/profile">
                   Profile
                 </NavDropdown.Item>

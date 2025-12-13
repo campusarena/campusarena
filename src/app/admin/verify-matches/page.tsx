@@ -93,7 +93,7 @@ export default function VerifyMatchesPage() {
           </Card>
         ) : (
           <Card className="ca-feature-card p-4">
-            <Table responsive style={{ color: '#f4f4f8' }}>
+            <Table responsive variant="dark" style={{ color: '#f4f4f8' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.08)' }}>
                   <th style={{ border: 'none', padding: '1rem' }}>Match</th>
