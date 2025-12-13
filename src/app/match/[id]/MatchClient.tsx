@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Container, Row, Col, Form, Button, Badge, Breadcrumb } from 'react-bootstrap';
 import Link from 'next/link';
+import BackButton from '@/components/BackButton';
 import './match.css';
 
 type Feedback = {
@@ -148,12 +149,7 @@ export default function MatchClient({
           <Col lg={8} xl={6} className="mb-4">
             {/* Breadcrumb + back to dashboard */}
             <div className="d-flex justify-content-between align-items-center mb-3">
-              <Link
-                href="/dashboard"
-                className="btn btn-sm btn-outline-light ca-glass-button"
-              >
-                ← Back to Dashboard
-              </Link>
+              <BackButton label="← Back" fallbackHref={`/events/${tournamentId}`} />
 
               <Breadcrumb>
                 <Breadcrumb.Item linkAs={Link} href="/standings">
