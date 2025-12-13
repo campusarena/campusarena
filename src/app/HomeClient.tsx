@@ -3,6 +3,7 @@
 import { Container, Row, Col, Card, Badge, Button } from "react-bootstrap";
 import { Controller, Trophy, People, Film } from "react-bootstrap-icons";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export type LandingEvent = {
   id: number;
@@ -24,17 +25,17 @@ export default function HomeClient({ upcomingEvents }: { upcomingEvents: Landing
     {
       icon: <Trophy />,
       title: "Tournament formats",
-      text: "Run single-elimination brackets now, with room to expand to Swiss, double-elim, and round robin.",
+      text: "Run single elimination brackets now, with room to expand to Swiss, double elim, and round robin.",
     },
     {
       icon: <Controller />,
       title: "Sports & esports",
-      text: "Support both on-field leagues and online events for games like Smash, Valorant, Mario Kart, and more.",
+      text: "Support both on field leagues and online events for games like Smash, Valorant, Mario Kart, and more.",
     },
     {
       icon: <People />,
       title: "Match pages & standings",
-      text: "Each matchup gets its own page with time, teams, and score reporting, plus a standings + bracket view.",
+      text: "Each matchup gets its own page with time, teams, and score reporting, plus a standings and bracket view.",
     },
     {
       icon: <Film />,
@@ -90,24 +91,30 @@ export default function HomeClient({ upcomingEvents }: { upcomingEvents: Landing
                   )}
 
                   {upcomingEvents.map((ev) => (
-                    <Card key={ev.id} className="ca-event-card">
-                      <Card.Body className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
-                        <div>
-                          <div className="fw-semibold text-white">{ev.name}</div>
-                          <div className="text-secondary small">{ev.game}</div>
-                          <div className="text-secondary small mt-1">
-                            {ev.date ? new Date(ev.date).toLocaleString() : "TBD"}
+                    <Link
+                      key={ev.id}
+                      href={`/events/${ev.id}`}
+                      className="text-decoration-none text-reset"
+                    >
+                      <Card className="ca-event-card">
+                        <Card.Body className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                          <div>
+                            <div className="fw-semibold text-white">{ev.name}</div>
+                            <div className="text-secondary small">{ev.game}</div>
+                            <div className="text-secondary small mt-1">
+                              {ev.date ? new Date(ev.date).toLocaleString() : "TBD"}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="text-end mt-3 mt-md-0">
-                          <Badge className="ca-event-tag mb-1">Public</Badge>
-                          <div className="text-secondary small">
-                            {ev.participantCount}/{ev.maxParticipants ?? "?"} players
+                          <div className="text-end mt-3 mt-md-0">
+                            <Badge className="ca-event-tag mb-1">Public</Badge>
+                            <div className="text-secondary small">
+                              {ev.participantCount}/{ev.maxParticipants ?? "?"} players
+                            </div>
                           </div>
-                        </div>
-                      </Card.Body>
-                    </Card>
+                        </Card.Body>
+                      </Card>
+                    </Link>
                   ))}
                 </div>
               </div>

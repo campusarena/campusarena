@@ -33,6 +33,13 @@ export default function NavBar() {
             <Link href="/dashboard" className="nav-link ca-nav-link">
               Dashboard
             </Link>
+
+            {/* Archived only when logged in */}
+            {session && (
+              <Link href="/archivedevents" className="nav-link ca-nav-link">
+                Archived
+              </Link>
+            )}
           </Nav>
 
           {/* ---------- AUTH CONTROLS ---------- */}

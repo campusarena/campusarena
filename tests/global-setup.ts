@@ -6,6 +6,7 @@ import { PrismaClient, MatchStatus, EventRole } from '@prisma/client';
 const PLAYER_EMAIL = 'player1@campusarena.test';
 const ADMIN_EMAIL = 'admin@campusarena.test';
 const SEEDED_TOURNAMENT_ID = 1; // prisma/seed.ts uses stable IDs 1-3
+const SEEDED_PRIVATE_TOURNAMENT_ID = 4;
 
 function clearSavedAuthSessions(): void {
   const sessionsDir = path.join(__dirname, 'playwright-auth-sessions');
@@ -69,7 +70,23 @@ export default async function globalSetup(): Promise<void> {
       },
     });
 
-    return !!match;
+    if (!match) return false;
+
+    // Also ensure the PRIVATE tournament fixture exists (player has access via
+    // registration, but it must not appear on /publicevents).
+    const privateTournament = await prisma.tournament.findUnique({
+      where: { id: SEEDED_PRIVATE_TOURNAMENT_ID },
+    });
+    if (!privateTournament) return false;
+
+    const privateParticipant = await prisma.participant.findFirst({
+      where: {
+        tournamentId: SEEDED_PRIVATE_TOURNAMENT_ID,
+        userId: player.id,
+      },
+    });
+
+    return !!privateParticipant;
   };
 
   try {
