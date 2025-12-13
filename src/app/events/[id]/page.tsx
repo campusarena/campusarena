@@ -4,7 +4,6 @@ import EventInviteForm from '@/components/EventInviteForm';
 import { BracketView, type BracketMatch } from '@/components/BracketView';
 import { regenerateBracketAction } from '@/lib/eventActions';
 import { prisma } from '@/lib/prisma';
-import { CheckInButton } from './CheckInButton';
 import ParticipantsTable from './ParticipantsTable';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/authOptions';
@@ -72,6 +71,11 @@ export default async function EventDetailsPage({
     ).values(),
   );
 
+  // Check if any matches have been completed to lock regenerate bracket
+  const hasCompletedMatches = tournament.matches.some(
+    (m) => m.status === "COMPLETE" || m.status === "VERIFIED" || m.completedAt !== null
+  );
+
   const bracketMatches: BracketMatch[] = tournament.matches.map((m) => ({
     id: m.id,
     roundNumber: m.roundNumber,
@@ -137,11 +141,13 @@ export default async function EventDetailsPage({
   );
 
   // Determine if the current user is a participant and whether they are checked in.
+   // Determine if the current user is a participant
   const currentUserParticipant = currentUserId
     ? tournament.participants.find((p) => p.userId === currentUserId)
     : undefined;
   const isParticipant = !!currentUserParticipant;
-  const isCheckedIn = !!currentUserParticipant?.checkedIn;
+  // REMOVE THIS LINE - checkedIn property doesn't exist in Participant model:
+  // const isCheckedIn = !!currentUserParticipant?.checkedIn;
 
   return (
     <section className="ca-standings-page">
@@ -185,21 +191,27 @@ export default async function EventDetailsPage({
               <button
                 type="submit"
                 className="btn btn-sm btn-outline-light ca-glass-button"
+                disabled={hasCompletedMatches}
+                title={hasCompletedMatches ? "Cannot regenerate bracket after matches have been completed" : "Regenerate the tournament bracket"}
               >
                 Regenerate Bracket
               </button>
+              {hasCompletedMatches && (
+                <small className="text-warning ms-2">
+                  <i className="bi bi-lock-fill me-1"></i>
+                  Locked: Matches already completed
+                </small>
+              )}
             </form>
           )}
 
-          {/* Check-in controls: only show the button for participants who */}
-          {/* have not yet checked in. If already checked in, show text. */}
-          {isParticipant && !isCheckedIn && (
-            <CheckInButton tournamentId={tournament.id} />
-          )}
-          {isParticipant && isCheckedIn && (
-            <p className="mt-3 text-light small mb-0">
-              You are checked in for this event.
-            </p>
+          {/* Simplified participant message - removed event-level check-in logic */}
+          {isParticipant && (
+            <div className="mt-3">
+              <p className="text-light small mb-0">
+                You are registered for this event. Check in to individual matches when they&apos;re ready.
+              </p>
+            </div>
           )}
         </div>
 
