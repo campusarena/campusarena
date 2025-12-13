@@ -5,8 +5,24 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { EventFormat, EventRole } from '@prisma/client';
+import { EventFormat, EventRole, Role } from '@prisma/client';
 import { regenerateSingleElimBracket } from '@/lib/bracketService';
+
+const ALLOWED_TOURNAMENT_STATUSES = new Set(['upcoming', 'ongoing', 'completed'] as const);
+type AllowedTournamentStatus = 'upcoming' | 'ongoing' | 'completed';
+
+function normalizeTournamentStatus(raw: unknown): AllowedTournamentStatus | null {
+  const value = String(raw ?? '').trim().toLowerCase();
+
+  // Back-compat / convenience: allow "complete" but store "completed".
+  if (value === 'complete') return 'completed';
+
+  if (ALLOWED_TOURNAMENT_STATUSES.has(value as AllowedTournamentStatus)) {
+    return value as AllowedTournamentStatus;
+  }
+
+  return null;
+}
 
 export async function createTournamentAction(formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -133,5 +149,57 @@ export async function regenerateBracketAction(formData: FormData) {
   }
 
   await regenerateSingleElimBracket(tournamentId);
+  redirect(`/events/${tournamentId}`);
+}
+
+export async function updateTournamentStatusAction(formData: FormData) {
+  const session = await getServerSession(authOptions);
+  const userWithId = session?.user as { id?: string | number } | undefined;
+  const userIdRaw = userWithId?.id;
+
+  if (userIdRaw == null) {
+    return;
+  }
+
+  const userId = typeof userIdRaw === 'string' ? Number(userIdRaw) : userIdRaw;
+  if (!userId || Number.isNaN(userId)) {
+    return;
+  }
+
+  const tournamentIdRaw = formData.get('tournamentId');
+  const tournamentId = Number(tournamentIdRaw);
+  if (!tournamentId || Number.isNaN(tournamentId)) {
+    return;
+  }
+
+  const nextStatus = normalizeTournamentStatus(formData.get('status'));
+  if (!nextStatus) {
+    return;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    return;
+  }
+
+  if (user.role !== Role.ADMIN) {
+    const role = await prisma.eventRoleAssignment.findFirst({
+      where: {
+        tournamentId,
+        userId,
+        role: { in: [EventRole.OWNER, EventRole.ORGANIZER] },
+      },
+    });
+
+    if (!role) {
+      return;
+    }
+  }
+
+  await prisma.tournament.update({
+    where: { id: tournamentId },
+    data: { status: nextStatus },
+  });
+
   redirect(`/events/${tournamentId}`);
 }

@@ -1,8 +1,8 @@
-import { EventRole } from "@prisma/client";
+import { EventRole, Role } from "@prisma/client";
 import Link from "next/link";
 import EventInviteForm from '@/components/EventInviteForm';
 import { BracketView, type BracketMatch } from '@/components/BracketView';
-import { regenerateBracketAction } from '@/lib/eventActions';
+import { regenerateBracketAction, updateTournamentStatusAction } from '@/lib/eventActions';
 import { prisma } from '@/lib/prisma';
 import ParticipantsTable from './ParticipantsTable';
 import { getServerSession } from 'next-auth';
@@ -147,6 +147,12 @@ export default async function EventDetailsPage({
     )
   );
 
+  const currentUser = currentUserId
+    ? await prisma.user.findUnique({ where: { id: currentUserId }, select: { role: true } })
+    : null;
+  const isAdmin = currentUser?.role === Role.ADMIN;
+  const canManageEventStatus = hasOrganizerAccess || isAdmin;
+
   // Determine if the current user is a participant and whether they are checked in.
   const currentUserParticipant = currentUserId
     ? tournament.participants.find((p) => p.userId === currentUserId)
@@ -186,6 +192,31 @@ export default async function EventDetailsPage({
           <p>
             <span className="fw-bold">Status:</span> {tournament.status}
           </p>
+
+          {canManageEventStatus && (
+            <form
+              action={updateTournamentStatusAction}
+              className="d-flex flex-wrap gap-2 align-items-center"
+            >
+              <input type="hidden" name="tournamentId" value={tournament.id} />
+              <select
+                name="status"
+                defaultValue={tournament.status}
+                className="form-select form-select-sm w-auto"
+                aria-label="Set event status"
+              >
+                <option value="upcoming">Upcoming</option>
+                <option value="ongoing">Ongoing</option>
+                <option value="completed">Complete</option>
+              </select>
+              <button
+                type="submit"
+                className="btn btn-sm btn-outline-light ca-glass-button"
+              >
+                Update Status
+              </button>
+            </form>
+          )}
 
           {hasOrganizerAccess && (
             <form
@@ -280,15 +311,17 @@ export default async function EventDetailsPage({
         </div>
 
         {/* Invite Participants */}
-        <div className="ca-feature-card mb-4 p-4">
-          <h3 className="text-white mb-3">Invite Participants</h3>
-          <p className="text-light small mb-3">
-            Generate invite links to send to players or teams. They can accept the invite
-            to join this event.
-          </p>
+        {tournament.status !== 'completed' && (
+          <div className="ca-feature-card mb-4 p-4">
+            <h3 className="text-white mb-3">Invite Participants</h3>
+            <p className="text-light small mb-3">
+              Generate invite links to send to players or teams. They can accept the invite
+              to join this event.
+            </p>
 
-          <EventInviteForm tournamentId={tournament.id} />
-        </div>
+            <EventInviteForm tournamentId={tournament.id} />
+          </div>
+        )}
       </div>
     </section>
   );
