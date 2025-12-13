@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/authOptions';
 import BackButton from "@/components/BackButton";
 import { CheckInButton } from './CheckInButton';
+import EditMatchScoreClient, { type EditableMatchSummary } from './EditMatchScoreClient';
 
 interface EventDetailsParams {
   id: string;
@@ -153,6 +154,18 @@ export default async function EventDetailsPage({
   const isAdmin = currentUser?.role === Role.ADMIN;
   const canManageEventStatus = hasOrganizerAccess || isAdmin;
 
+  const canEditMatchScores = hasOrganizerAccess && !isAdmin;
+
+  const editableMatches: EditableMatchSummary[] = tournament.matches
+    .filter((m) => m.p1Id && m.p2Id)
+    .map((m) => ({
+      id: m.id,
+      roundNumber: m.roundNumber ?? null,
+      slotIndex: m.slotIndex ?? null,
+      p1Label: m.p1?.user?.name ?? m.p1?.team?.name ?? 'TBD',
+      p2Label: m.p2?.user?.name ?? m.p2?.team?.name ?? 'TBD',
+    }));
+
   // Determine if the current user is a participant and whether they are checked in.
   const currentUserParticipant = currentUserId
     ? tournament.participants.find((p) => p.userId === currentUserId)
@@ -239,6 +252,10 @@ export default async function EventDetailsPage({
                 </small>
               )}
             </form>
+          )}
+
+          {canEditMatchScores && editableMatches.length > 0 && (
+            <EditMatchScoreClient matches={editableMatches} />
           )}
 
           {isParticipant && (

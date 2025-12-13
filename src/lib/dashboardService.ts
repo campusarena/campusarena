@@ -15,6 +15,7 @@ import {
   type Tournament,
   type User,
   type Team,
+  EventRole,
 } from '@prisma/client';
 
 // Include types with relations for cleaner helpers
@@ -68,6 +69,20 @@ export async function getDashboardDataForUser(
     },
   });
 
+  // 2️⃣ Tournaments this user is staff for (OWNER/ORGANIZER)
+  const staffRows = await prisma.eventRoleAssignment.findMany({
+    where: {
+      userId,
+      role: { in: [EventRole.OWNER, EventRole.ORGANIZER] },
+      tournament: {
+        status: { not: 'completed' },
+      },
+    },
+    include: {
+      tournament: true,
+    },
+  });
+
   // Helper to map Tournament → EventKind (for now, all "Tournament")
   const inferEventKind = (): EventKind => 'Tournament';
 
@@ -78,9 +93,19 @@ export async function getDashboardDataForUser(
     kind: inferEventKind(),
   }));
 
+  // Events as staff
+  const eventsAsStaff: DashboardEvent[] = staffRows.map((r) => ({
+    id: String(r.tournament.id),
+    name: r.tournament.name,
+    kind: inferEventKind(),
+  }));
+
   // Deduplicate events
   const eventMap = new Map<string, DashboardEvent>();
   eventsAsPlayer.forEach((ev) => {
+    eventMap.set(ev.id, ev);
+  });
+  eventsAsStaff.forEach((ev) => {
     eventMap.set(ev.id, ev);
   });
   const activeEvents = Array.from(eventMap.values());
