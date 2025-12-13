@@ -13,6 +13,25 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding CampusArena test data...');
 
+  // ---------------------------------------------------------------------------
+  // 0. Supported games (used for skill-based seeding)
+  // ---------------------------------------------------------------------------
+  await prisma.game.upsert({
+    where: { key: 'smash-ultimate' },
+    update: { name: 'Super Smash Bros. Ultimate', active: true },
+    create: { key: 'smash-ultimate', name: 'Super Smash Bros. Ultimate', active: true },
+  });
+  await prisma.game.upsert({
+    where: { key: 'valorant' },
+    update: { name: 'VALORANT', active: true },
+    create: { key: 'valorant', name: 'VALORANT', active: true },
+  });
+  await prisma.game.upsert({
+    where: { key: 'league-of-legends' },
+    update: { name: 'League of Legends', active: true },
+    create: { key: 'league-of-legends', name: 'League of Legends', active: true },
+  });
+
   // Clean up any existing test data for our known tournaments so
   // repeated seeds stay deterministic and don't accumulate rows.
   const seedTournamentIds = [1, 2, 3, 4];

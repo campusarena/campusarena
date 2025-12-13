@@ -34,6 +34,9 @@ export default async function AdminPage() {
           <Link href="/admin/users" className="btn btn-outline-light btn-sm">
             Manage Users
           </Link>
+          <Link href="/admin/elo" className="btn btn-outline-light btn-sm">
+            View Elo Ratings
+          </Link>
           <Link href="/admin/events" className="btn btn-outline-light btn-sm">
             Manage Events
           </Link>

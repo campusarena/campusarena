@@ -38,7 +38,9 @@ export async function createTournamentAction(formData: FormData) {
   const userId = Number(userIdStr);
 
   const name = String(formData.get('name') ?? '').trim();
-  const game = String(formData.get('game') ?? '').trim();
+  const customGame = String(formData.get('game') ?? '').trim();
+  const supportedGameIdRaw = String(formData.get('supportedGameId') ?? '').trim();
+  const seedBySkill = formData.get('seedBySkill') === 'on';
   const location = String(formData.get('location') ?? '').trim();
 
   const isTeamBasedRaw = String(formData.get('isTeamBased') ?? 'team');
@@ -84,14 +86,53 @@ export async function createTournamentAction(formData: FormData) {
   const autoBracketRaw = formData.get('autoBracket') as string | null;
   const autoBracket = autoBracketRaw === 'on';
 
-  if (!name || !game) {
-    throw new Error('Event name and game are required.');
+  if (!name) {
+    throw new Error('Event name is required.');
+  }
+
+  let game: string;
+  let supportedGameId: number | null = null;
+
+  if (seedBySkill) {
+    if (!supportedGameIdRaw) {
+      throw new Error('Skill-based seeding requires selecting a supported game.');
+    }
+    if (customGame) {
+      throw new Error('Choose either a supported game or a custom game (not both).');
+    }
+
+    const parsedId = Number(supportedGameIdRaw);
+    if (!parsedId || Number.isNaN(parsedId)) {
+      throw new Error('Invalid supported game selection.');
+    }
+
+    const supportedGame = await prisma.game.findFirst({
+      where: { id: parsedId, active: true },
+      select: { id: true, name: true },
+    });
+
+    if (!supportedGame) {
+      throw new Error('Selected supported game was not found.');
+    }
+
+    supportedGameId = supportedGame.id;
+    game = supportedGame.name;
+  } else {
+    if (supportedGameIdRaw) {
+      throw new Error('Choose either a supported game or a custom game (not both).');
+    }
+    if (!customGame) {
+      throw new Error('Game / sport is required.');
+    }
+    game = customGame;
   }
 
   const tournament = await prisma.tournament.create({
     data: {
       name,
       game,
+      supportedGameId,
+      seedBySkill,
       format: EventFormat.SINGLE_ELIM,
       isTeamBased,
       startDate,

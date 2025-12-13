@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Container, Card, Button, Badge, Table, Alert } from 'react-bootstrap';
+import { Container, Card, Button, Badge, Table, Alert, Form } from 'react-bootstrap';
 
 interface MatchReport {
   id: number;
@@ -12,10 +12,17 @@ interface MatchReport {
   createdAt: string;
   reportedBy: {
     email: string;
+    name?: string | null;
   };
   match: {
-    p1: { team?: { name: string } };
-    p2: { team?: { name: string } };
+    p1: {
+      user?: { name: string } | null;
+      team?: { name: string; members?: { user: { name: string } }[] } | null;
+    };
+    p2: {
+      user?: { name: string } | null;
+      team?: { name: string; members?: { user: { name: string } }[] } | null;
+    };
   };
 }
 
@@ -24,6 +31,7 @@ export default function VerifyMatchesPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [q, setQ] = useState('');
 
   const fetchPendingReports = async () => {
     try {
@@ -45,6 +53,30 @@ export default function VerifyMatchesPage() {
   useEffect(() => {
     fetchPendingReports();
   }, []);
+
+  const qNormalized = q.trim().toLowerCase();
+  const filteredReports = qNormalized
+    ? reports.filter((report) => {
+        const names: string[] = [];
+        const p1 = report.match?.p1;
+        const p2 = report.match?.p2;
+
+        if (p1?.user?.name) names.push(p1.user.name);
+        if (p2?.user?.name) names.push(p2.user.name);
+
+        const p1Members = p1?.team?.members ?? [];
+        for (const m of p1Members) {
+          if (m?.user?.name) names.push(m.user.name);
+        }
+
+        const p2Members = p2?.team?.members ?? [];
+        for (const m of p2Members) {
+          if (m?.user?.name) names.push(m.user.name);
+        }
+
+        return names.some((n) => n.toLowerCase().includes(qNormalized));
+      })
+    : reports;
 
   const handleVerify = async (reportId: number, action: 'approve' | 'reject') => {
     setMessage('');
@@ -84,12 +116,26 @@ export default function VerifyMatchesPage() {
       <Container className="py-5">
         <h1 className="mb-4" style={{ color: '#f4f4f8' }}>Verify Match Results</h1>
 
+        <Card className="ca-feature-card p-4 mb-4">
+          <Form.Group>
+            <Form.Label style={{ color: '#f4f4f8' }}>Search matches by user name</Form.Label>
+            <Form.Control
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Type a player name…"
+              className="ca-auth-input"
+            />
+          </Form.Group>
+        </Card>
+
         {message && <Alert variant="success" onClose={() => setMessage('')} dismissible>{message}</Alert>}
         {error && <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>}
 
-        {reports.length === 0 ? (
+        {filteredReports.length === 0 ? (
           <Card className="ca-feature-card p-4">
-            <p style={{ color: '#c2c5e4', margin: 0 }}>No pending match reports to verify.</p>
+            <p style={{ color: '#c2c5e4', margin: 0 }}>
+              {reports.length === 0 ? 'No pending match reports to verify.' : 'No matches found for that user.'}
+            </p>
           </Card>
         ) : (
           <Card className="ca-feature-card p-4">
@@ -104,16 +150,17 @@ export default function VerifyMatchesPage() {
                 </tr>
               </thead>
               <tbody>
-                {reports.map((report) => (
+                {filteredReports.map((report) => (
                   <tr key={report.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
                     <td style={{ border: 'none', padding: '1rem' }}>
-                      {report.match.p1?.team?.name || 'TBD'} vs {report.match.p2?.team?.name || 'TBD'}
+                      {report.match.p1?.team?.name || report.match.p1?.user?.name || 'TBD'} vs{' '}
+                      {report.match.p2?.team?.name || report.match.p2?.user?.name || 'TBD'}
                     </td>
                     <td style={{ border: 'none', padding: '1rem' }}>
                       {report.p1Score} - {report.p2Score}
                     </td>
                     <td style={{ border: 'none', padding: '1rem' }}>
-                      {report.reportedBy.email}
+                      {report.reportedBy.name ? `${report.reportedBy.name} (${report.reportedBy.email})` : report.reportedBy.email}
                     </td>
                     <td style={{ border: 'none', padding: '1rem' }}>
                       <Badge bg={report.status === 'PENDING' ? 'warning' : 'secondary'}>

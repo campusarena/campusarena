@@ -6,7 +6,14 @@ import Link from 'next/link';
 import { adminKickUserFromPlatformAction } from '@/lib/adminActions';
 import ConfirmActionForm from '@/components/ConfirmActionForm';
 
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams?: { q?: string };
+}) {
+  const qRaw = (searchParams?.q ?? '').trim();
+  const q = qRaw.length > 0 ? qRaw : null;
+
   const users = await prisma.user.findMany({
     select: {
       id: true,
@@ -14,6 +21,7 @@ export default async function AdminUsersPage() {
       name: true,
       role: true,
     },
+    where: q ? { name: { contains: q, mode: 'insensitive' } } : undefined,
     orderBy: [{ role: 'desc' }, { id: 'asc' }],
   });
 
@@ -32,6 +40,29 @@ export default async function AdminUsersPage() {
       </div>
 
       <Card className="ca-feature-card p-3">
+        <form method="get" className="d-flex gap-2 flex-wrap align-items-end mb-3">
+          <div className="flex-grow-1" style={{ minWidth: 240 }}>
+            <label className="text-white form-label">Search users</label>
+            <input
+              name="q"
+              defaultValue={qRaw}
+              placeholder="Search by name"
+              className="form-control ca-auth-input"
+            />
+          </div>
+          <button type="submit" className="btn btn-outline-light btn-sm ca-glass-button">
+            Search
+          </button>
+          {q && (
+            <Link href="/admin/users" className="btn btn-outline-light btn-sm">
+              Clear
+            </Link>
+          )}
+        </form>
+
+        {users.length === 0 ? (
+          <div className="text-muted">No users found.</div>
+        ) : (
         <Table responsive hover variant="dark" className="m-0">
           <thead>
             <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.08)' }}>
@@ -64,6 +95,7 @@ export default async function AdminUsersPage() {
             ))}
           </tbody>
         </Table>
+        )}
       </Card>
     </>
   );

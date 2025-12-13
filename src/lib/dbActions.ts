@@ -129,6 +129,8 @@ export async function changePassword(credentials: { email: string; password: str
 export async function createTournament(data: {
   name: string;
   game: string;
+  supportedGameId?: number | null;
+  seedBySkill?: boolean;
   isTeamBased: boolean;
   startDate: Date;
   endDate?: Date | null;
@@ -139,6 +141,8 @@ export async function createTournament(data: {
     data: {
       name: data.name,
       game: data.game,
+      supportedGameId: data.supportedGameId ?? null,
+      seedBySkill: data.seedBySkill ?? false,
       format: 'SINGLE_ELIM',
       isTeamBased: data.isTeamBased,
       startDate: data.startDate,

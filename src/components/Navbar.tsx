@@ -89,6 +89,12 @@ export default function NavBar() {
                     <NavDropdown.Item as={Link} href="/admin/events">
                       Admin Events
                     </NavDropdown.Item>
+                    <NavDropdown.Item as={Link} href="/admin/verify-matches">
+                      Verify Matches
+                    </NavDropdown.Item>
+                    <NavDropdown.Item as={Link} href="/admin/elo">
+                      Elo Ratings
+                    </NavDropdown.Item>
                     <NavDropdown.Divider />
                   </>
                 )}
