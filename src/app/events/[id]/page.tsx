@@ -92,6 +92,7 @@ export default async function EventDetailsPage({
       label:
         m.p1?.user?.name ??
         m.p1?.team?.name ??
+        "TBD",
     },
     p2: {
       id: m.p2?.id ?? null,
