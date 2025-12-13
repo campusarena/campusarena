@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import authOptions from '@/lib/authOptions';
-import { EventRole } from '@prisma/client';
+import { EventRole, MatchSlot } from '@prisma/client';
+import { autoAdvanceByesFromMatchIds } from '@/lib/byeService';
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -91,22 +92,65 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      const applyToSlot = async (matchId: number, slot: MatchSlot, participantId: number) => {
+        await prisma.match.update({
+          where: { id: matchId },
+          data: slot === MatchSlot.P1 ? { p1Id: participantId } : { p2Id: participantId },
+        });
+      };
+
+      const winnerId = updatedMatch.winnerId;
+      const loserId =
+        winnerId && updatedMatch.p1Id && updatedMatch.p2Id
+          ? (winnerId === updatedMatch.p1Id ? updatedMatch.p2Id : updatedMatch.p1Id)
+          : null;
+
+      const fallbackSlotFromIndex = (slotIndex: number | null | undefined) =>
+        (slotIndex ?? 1) % 2 === 1 ? MatchSlot.P1 : MatchSlot.P2;
+
       // If this match feeds into a nextMatch, promote the winner into the
       // correct slot (p1 or p2) based on this match's slotIndex.
-      if (report.match.nextMatchId) {
-        const parent = await prisma.match.findUnique({
-          where: { id: report.match.nextMatchId },
-        });
+      if (report.match.nextMatchId && winnerId) {
+        const slot = report.match.nextMatchSlot ?? fallbackSlotFromIndex(report.match.slotIndex);
+        await applyToSlot(report.match.nextMatchId, slot, winnerId);
+      }
 
-        if (parent) {
-          const isLeftChild = (report.match.slotIndex ?? 1) % 2 === 1;
-          await prisma.match.update({
-            where: { id: parent.id },
-            data: isLeftChild
-              ? { p1Id: updatedMatch.winnerId ?? undefined }
-              : { p2Id: updatedMatch.winnerId ?? undefined },
-          });
-        }
+      // If this match has loser routing (double elim), promote the loser too.
+      if (report.match.loserNextMatchId && loserId) {
+        const slot = report.match.loserNextMatchSlot ?? fallbackSlotFromIndex(report.match.slotIndex);
+        await applyToSlot(report.match.loserNextMatchId, slot, loserId);
+      }
+
+      // If any downstream match is now a "true bye" (missing slot has no inbound
+      // edges due to byes), auto-advance it.
+      await autoAdvanceByesFromMatchIds(
+        [report.match.nextMatchId, report.match.loserNextMatchId].filter(
+          (id): id is number => typeof id === 'number',
+        ),
+      );
+
+      // Grand Finals reset: if the Losers bracket champ wins GF1, schedule GF2
+      // with the same two participants.
+      if (
+        report.match.bracket === 'FINALS' &&
+        report.match.roundNumber === 1 &&
+        report.match.nextMatchId &&
+        updatedMatch.p1Id &&
+        updatedMatch.p2Id &&
+        winnerId === updatedMatch.p2Id
+      ) {
+        await prisma.match.update({
+          where: { id: report.match.nextMatchId },
+          data: {
+            p1Id: updatedMatch.p1Id,
+            p2Id: updatedMatch.p2Id,
+            p1Score: null,
+            p2Score: null,
+            winnerId: null,
+            completedAt: null,
+            status: 'PENDING',
+          },
+        });
       }
 
       return NextResponse.json({ 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { EventRole, MatchStatus, Prisma, Role, ReportStatus } from '@prisma/client';
+import { EventFormat, EventRole, MatchStatus, Prisma, Role, ReportStatus } from '@prisma/client';
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0;
@@ -61,11 +61,19 @@ export async function POST(request: NextRequest) {
         winnerId: true,
         slotIndex: true,
         nextMatchId: true,
+        tournament: { select: { format: true } },
       },
     });
 
     if (!match) {
       return NextResponse.json({ error: 'Match not found' }, { status: 404 });
+    }
+
+    if (match.tournament.format === EventFormat.DOUBLE_ELIM) {
+      return NextResponse.json(
+        { error: 'Editing verified scores is not supported for double elimination yet' },
+        { status: 400 },
+      );
     }
 
     if (!match.p1Id || !match.p2Id) {

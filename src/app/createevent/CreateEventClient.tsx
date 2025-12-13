@@ -134,8 +134,9 @@ export default function CreateEventClient({
 
                   <Form.Group className="mb-3">
                     <Form.Label>Format</Form.Label>
-                    <Form.Select name="format" disabled className="ca-auth-input">
-                      <option value="SINGLE_ELIM">Single Elimination (current)</option>
+                    <Form.Select name="format" defaultValue="SINGLE_ELIM" className="ca-auth-input">
+                      <option value="SINGLE_ELIM">Single Elimination</option>
+                      <option value="DOUBLE_ELIM">Double Elimination</option>
                     </Form.Select>
                   </Form.Group>
 

@@ -98,6 +98,7 @@ export default async function EventDetailsPage({
 
   const bracketMatches: BracketMatch[] = tournament.matches.map((m) => ({
     id: m.id,
+    bracket: m.bracket,
     roundNumber: m.roundNumber,
     slotIndex: m.slotIndex,
     p1: {
