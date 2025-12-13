@@ -7,7 +7,6 @@ import PublicEventsClient, {
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/authOptions';
 import { redirect } from 'next/navigation';
-import { EventRole, Role } from '@prisma/client';
 
 export default async function ArchivedEventsPage() {
   // Require login
@@ -25,43 +24,25 @@ export default async function ArchivedEventsPage() {
     redirect('/auth/signin');
   }
 
-  const isAdmin = currentUser.role === Role.ADMIN;
-
   const tournaments = await prisma.tournament.findMany({
     where: {
       status: 'completed',
-      ...(isAdmin
-        ? {}
-        : {
-            OR: [
-              {
-                staff: {
+      participants: {
+        some: {
+          OR: [
+            { userId: currentUser.id },
+            {
+              team: {
+                members: {
                   some: {
                     userId: currentUser.id,
-                    role: { in: [EventRole.OWNER, EventRole.ORGANIZER] },
                   },
                 },
               },
-              {
-                participants: {
-                  some: {
-                    OR: [
-                      { userId: currentUser.id },
-                      {
-                        team: {
-                          members: {
-                            some: {
-                              userId: currentUser.id,
-                            },
-                          },
-                        },
-                      },
-                    ],
-                  },
-                },
-              },
-            ],
-          }),
+            },
+          ],
+        },
+      },
     },
     include: {
       _count: { select: { participants: true } },

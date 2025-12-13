@@ -138,15 +138,21 @@ model Match {
   createdAt    DateTime      @default(now())
   location     String?
   nextMatchId  Int?
+  nextMatchSlot MatchSlot?
+  loserNextMatchId Int?
+  loserNextMatchSlot MatchSlot?
   p1Id         Int?
   p1Score      Int?
   p2Id         Int?
   p2Score      Int?
   roundNumber  Int?
   slotIndex    Int?
+  bracket      BracketSide   @default(WINNERS)
   status       MatchStatus   @default(PENDING)
   nextMatch    Match?        @relation("MatchNext", fields: [nextMatchId], references: [id])
   children     Match[]       @relation("MatchNext")
+  loserNextMatch Match?      @relation("MatchLoserNext", fields: [loserNextMatchId], references: [id])
+  loserChildren  Match[]     @relation("MatchLoserNext")
   p1           Participant?  @relation("MatchP1", fields: [p1Id], references: [id])
   p2           Participant?  @relation("MatchP2", fields: [p2Id], references: [id])
   tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
@@ -195,6 +201,18 @@ enum Role {
 
 enum EventFormat {
   SINGLE_ELIM
+  DOUBLE_ELIM
+}
+
+enum MatchSlot {
+  P1
+  P2
+}
+
+enum BracketSide {
+  WINNERS
+  LOSERS
+  FINALS
 }
 
 enum MatchStatus {

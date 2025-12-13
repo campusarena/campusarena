@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import authOptions from '@/lib/authOptions';
+import { EventRole } from '@prisma/client';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -11,19 +12,31 @@ export async function GET() {
   }
 
   try {
-    // Get user and check if admin
+    // Get user
     const user = await prisma.user.findUnique({
       where: { email: session.user.email! },
     });
 
-    if (!user || user.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Get all pending reports
+    // Only return pending reports for tournaments where this user is allowed to verify
+    // (owner/organizer). This prevents "admin" from implicitly granting access to
+    // unrelated events/matches.
     const reports = await prisma.matchReport.findMany({
       where: {
         status: 'PENDING',
+        match: {
+          tournament: {
+            staff: {
+              some: {
+                userId: user.id,
+                role: { in: [EventRole.OWNER, EventRole.ORGANIZER] },
+              },
+            },
+          },
+        },
       },
       include: {
         reportedBy: {

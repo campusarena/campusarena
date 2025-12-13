@@ -6,7 +6,7 @@ import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { EventFormat, EventRole, Role } from '@prisma/client';
-import { regenerateSingleElimBracket } from '@/lib/bracketService';
+import { regenerateDoubleElimBracket, regenerateSingleElimBracket } from '@/lib/bracketService';
 
 const ALLOWED_TOURNAMENT_STATUSES = new Set(['upcoming', 'ongoing', 'completed'] as const);
 type AllowedTournamentStatus = 'upcoming' | 'ongoing' | 'completed';
@@ -86,6 +86,12 @@ export async function createTournamentAction(formData: FormData) {
   const autoBracketRaw = formData.get('autoBracket') as string | null;
   const autoBracket = autoBracketRaw === 'on';
 
+  const formatRaw = String(formData.get('format') ?? '').trim();
+  const format =
+    formatRaw === EventFormat.DOUBLE_ELIM
+      ? EventFormat.DOUBLE_ELIM
+      : EventFormat.SINGLE_ELIM;
+
   if (!name) {
     throw new Error('Event name is required.');
   }
@@ -133,14 +139,14 @@ export async function createTournamentAction(formData: FormData) {
       game,
       supportedGameId,
       seedBySkill,
-      format: EventFormat.SINGLE_ELIM,
+      format,
       isTeamBased,
       startDate,
       status: 'upcoming',
       maxParticipants,
       location: location || null,
       visibility,
-      // autoBracket flag is handled by regenerateSingleElimBracket
+      autoBracket,
     },
   });
 
@@ -153,7 +159,11 @@ export async function createTournamentAction(formData: FormData) {
   });
 
   if (autoBracket) {
-    await regenerateSingleElimBracket(tournament.id);
+    if (tournament.format === EventFormat.DOUBLE_ELIM) {
+      await regenerateDoubleElimBracket(tournament.id);
+    } else {
+      await regenerateSingleElimBracket(tournament.id);
+    }
   }
 
   redirect('/dashboard');
@@ -189,7 +199,20 @@ export async function regenerateBracketAction(formData: FormData) {
     return;
   }
 
-  await regenerateSingleElimBracket(tournamentId);
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { format: true },
+  });
+
+  if (!tournament) {
+    return;
+  }
+
+  if (tournament.format === EventFormat.DOUBLE_ELIM) {
+    await regenerateDoubleElimBracket(tournamentId);
+  } else {
+    await regenerateSingleElimBracket(tournamentId);
+  }
   redirect(`/events/${tournamentId}`);
 }
 

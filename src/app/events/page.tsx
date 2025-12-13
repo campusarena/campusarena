@@ -33,6 +33,7 @@ export default async function EventsPage() {
   // Pull events user can access:
   const tournaments = await prisma.tournament.findMany({
     where: {
+      status: { not: 'completed' },
       OR: [
         { participants: { some: { userId } } },
         { staff: { some: { userId } } },
