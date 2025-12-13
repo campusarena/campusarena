@@ -11,7 +11,7 @@ import { regenerateSingleElimBracket } from '@/lib/bracketService';
 export async function createTournamentAction(formData: FormData) {
   const session = await getServerSession(authOptions);
 
-  // 👇 Narrow the type so TS knows about `id`
+  // Narrow the type so TS knows about `id`
   const userWithId = session?.user as { id?: string | number } | undefined;
   const userIdStr = userWithId?.id;
 
@@ -30,12 +30,34 @@ export async function createTournamentAction(formData: FormData) {
 
   const maxParticipantsRaw = formData.get('maxParticipants');
   const maxParticipants =
-    maxParticipantsRaw ? Number(maxParticipantsRaw) : null;
+    maxParticipantsRaw && String(maxParticipantsRaw).length > 0
+      ? Number(maxParticipantsRaw)
+      : null;
 
-  const startDateRaw = formData.get('startDate');
-  const startDate = startDateRaw
-    ? new Date(String(startDateRaw))
-    : new Date();
+  // New: read date and time separately
+  const startDateRaw = String(formData.get('startDate') ?? '').trim();
+  const startTimeRaw = String(formData.get('startTime') ?? '').trim();
+
+  let startDate: Date;
+
+  if (startDateRaw) {
+    if (startTimeRaw) {
+      // Combine local date and time into one ISO style string
+      // Browser sends "HH:MM" so this is safe
+      startDate = new Date(`${startDateRaw}T${startTimeRaw}`);
+    } else {
+      // If no time, default to midnight
+      startDate = new Date(`${startDateRaw}T00:00`);
+    }
+
+    // Fallback in case the string is invalid
+    if (Number.isNaN(startDate.getTime())) {
+      startDate = new Date();
+    }
+  } else {
+    // If no date at all, default to now
+    startDate = new Date();
+  }
 
   const visibilityRaw = formData.get('visibility') as string | null;
   const visibility =
@@ -61,7 +83,7 @@ export async function createTournamentAction(formData: FormData) {
       maxParticipants,
       location: location || null,
       visibility,
-      // For now, store this flag on status string extension via metadata field later
+      // autoBracket flag is handled by regenerateSingleElimBracket
     },
   });
 
@@ -113,4 +135,3 @@ export async function regenerateBracketAction(formData: FormData) {
   await regenerateSingleElimBracket(tournamentId);
   redirect(`/events/${tournamentId}`);
 }
-
