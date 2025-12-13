@@ -7,6 +7,17 @@ import { InvitationStatus, EventRole, Role } from '@prisma/client';
 import authOptions from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 
+const INVITE_EXPIRY_DAYS = 7;
+const INVITE_EXPIRY_MS = INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000;
+
+function getInvitationExpiresAt(createdAt: Date): Date {
+  return new Date(createdAt.getTime() + INVITE_EXPIRY_MS);
+}
+
+function isInvitationExpired(createdAt: Date): boolean {
+  return Date.now() > createdAt.getTime() + INVITE_EXPIRY_MS;
+}
+
 /** Helper: get current user id + email or throw */
 async function requireUser() {
   const session = await getServerSession(authOptions);
@@ -90,14 +101,23 @@ export async function sendEventInvite(tournamentId: number, email: string) {
 
   const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
   const acceptUrl = `${baseUrl}/invite/${invite.token}`;
+  const expiresAt = getInvitationExpiresAt(invite.createdAt);
 
-  console.log(`Invite from ${inviterEmail} to ${email}: ${acceptUrl}`);
+  console.log(
+    `Invite from ${inviterEmail} to ${email}: ${acceptUrl} (expires ${expiresAt.toISOString()})`,
+  );
 
-  return { ok: true, url: acceptUrl };
+  return {
+    ok: true,
+    url: acceptUrl,
+    expiresAt: expiresAt.toISOString(),
+    message: `Invite link expires in ${INVITE_EXPIRY_DAYS} days (${expiresAt.toLocaleString()}).`,
+  };
 }
 
 /**
  * Accept an invitation: link this user and add them as Participant (if not already).
+ * Invitations are now reusable - multiple users can join with the same code.
  */
 export async function acceptInvitation(token: string) {
   const { id: userId } = await requireUser();
@@ -110,9 +130,18 @@ export async function acceptInvitation(token: string) {
     throw new Error('Invitation not found.');
   }
 
-  if (invitation.status !== InvitationStatus.PENDING) {
-    throw new Error('This invitation is no longer valid.');
+  if (isInvitationExpired(invitation.createdAt)) {
+    await prisma.invitation.update({
+      where: { token },
+      data: { status: InvitationStatus.EXPIRED, respondedAt: new Date() },
+    });
+    throw new Error('This invitation has expired.');
   }
+
+  // Remove single-use restriction - invitations can be used multiple times
+  // if (invitation.status !== InvitationStatus.PENDING) {
+  //   throw new Error('This invitation is no longer valid.');
+  // }
 
   // Optional: enforce email match
   // const session = await getServerSession(authOptions);
@@ -128,31 +157,34 @@ export async function acceptInvitation(token: string) {
     },
   });
 
-  if (!existingParticipant) {
-    // Auto-assign next available seed when a player joins via invite.
-    const maxSeedRow = await prisma.participant.findFirst({
-      where: { tournamentId: invitation.tournamentId },
-      orderBy: { seed: 'desc' },
-      select: { seed: true },
-    });
-
-    const nextSeed = (maxSeedRow?.seed ?? 0) + 1;
-
-    await prisma.participant.create({
-      data: {
-        tournamentId: invitation.tournamentId,
-        userId,
-        seed: nextSeed,
-      },
-    });
+  if (existingParticipant) {
+    throw new Error('You are already a participant in this tournament.');
   }
 
+  // Auto-assign next available seed when a player joins via invite.
+  const maxSeedRow = await prisma.participant.findFirst({
+    where: { tournamentId: invitation.tournamentId },
+    orderBy: { seed: 'desc' },
+    select: { seed: true },
+  });
+
+  const nextSeed = (maxSeedRow?.seed ?? 0) + 1;
+
+  await prisma.participant.create({
+    data: {
+      tournamentId: invitation.tournamentId,
+      userId,
+      seed: nextSeed,
+    },
+  });
+
+  // Update invitation to track latest usage, but keep it reusable
   await prisma.invitation.update({
     where: { token },
     data: {
       status: InvitationStatus.ACCEPTED,
-      invitedUserId: userId,
       respondedAt: new Date(),
+      // Note: invitedUserId is not updated to allow reuse by multiple users
     },
   });
 }
@@ -169,6 +201,14 @@ export async function declineInvitation(token: string) {
 
   if (!invitation) {
     throw new Error('Invitation not found.');
+  }
+
+  if (isInvitationExpired(invitation.createdAt)) {
+    await prisma.invitation.update({
+      where: { token },
+      data: { status: InvitationStatus.EXPIRED, respondedAt: new Date() },
+    });
+    throw new Error('This invitation has expired.');
   }
 
   await prisma.invitation.update({
@@ -201,7 +241,14 @@ export async function generateEventJoinCode(tournamentId: number) {
     },
   });
 
-  return { ok: true, code: invite.token };
+  const expiresAt = getInvitationExpiresAt(invite.createdAt);
+
+  return {
+    ok: true,
+    code: invite.token,
+    expiresAt: expiresAt.toISOString(),
+    message: `Join code expires in ${INVITE_EXPIRY_DAYS} days (${expiresAt.toLocaleString()}).`,
+  };
 }
 
 
