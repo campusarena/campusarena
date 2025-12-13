@@ -15,7 +15,7 @@ async function main() {
 
   // Clean up any existing test data for our known tournaments so
   // repeated seeds stay deterministic and don't accumulate rows.
-  const seedTournamentIds = [1, 2, 3];
+  const seedTournamentIds = [1, 2, 3, 4];
 
   // Delete child records that depend on tournaments 1-3.
   await prisma.matchReport.deleteMany({
@@ -134,6 +134,35 @@ async function main() {
       tournamentId: upcomingTournament.id,
       userId: adminUser.id,
       role: EventRole.OWNER,
+    },
+  });
+
+  // ---------------------------------------------------------------------------
+  // 2b. PRIVATE tournament (player has access via registration, but it must NOT
+  // appear on the public events browse page).
+  // ---------------------------------------------------------------------------
+  const privateTournament = await prisma.tournament.upsert({
+    where: { id: 4 },
+    update: {},
+    create: {
+      name: 'Private Invite Only Event',
+      game: 'Test Private Game',
+      format: EventFormat.SINGLE_ELIM,
+      isTeamBased: false,
+      startDate: new Date(),
+      status: 'upcoming',
+      maxParticipants: 16,
+      location: 'Private Location',
+      visibility: 'PRIVATE',
+    },
+  });
+
+  // Register player1 for the private event so they "have access" to it.
+  await prisma.participant.create({
+    data: {
+      tournamentId: privateTournament.id,
+      userId: player1.id,
+      seed: 1,
     },
   });
 

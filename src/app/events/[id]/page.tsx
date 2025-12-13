@@ -58,6 +58,12 @@ export default async function EventDetailsPage({
     );
   }
 
+  // Show date and time nicely formatted
+  const formattedStart = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(tournament.startDate);
+
   const playerKeyForParticipant = (p: { id: number }) => p.id;
 
   // Use the tournament participants list as the authoritative set for
@@ -86,14 +92,13 @@ export default async function EventDetailsPage({
       label:
         m.p1?.user?.name ??
         m.p1?.team?.name ??
-        'TBD',
     },
     p2: {
       id: m.p2?.id ?? null,
       label:
         m.p2?.user?.name ??
         m.p2?.team?.name ??
-        'TBD',
+        "TBD",
     },
   }));
 
@@ -101,7 +106,7 @@ export default async function EventDetailsPage({
   const recordByPlayer = new Map<number, { wins: number; losses: number }>();
 
   for (const m of tournament.matches) {
-    if (m.status !== 'VERIFIED' || !m.winnerId || !m.p1Id || !m.p2Id) continue;
+    if (m.status !== "VERIFIED" || !m.winnerId || !m.p1Id || !m.p2Id) continue;
 
     const p1Key = m.p1Id;
     const p2Key = m.p2Id;
@@ -142,7 +147,6 @@ export default async function EventDetailsPage({
   );
 
   // Determine if the current user is a participant and whether they are checked in.
-   // Determine if the current user is a participant
   const currentUserParticipant = currentUserId
     ? tournament.participants.find((p) => p.userId === currentUserId)
     : undefined;
@@ -153,19 +157,19 @@ export default async function EventDetailsPage({
     <section className="ca-standings-page">
       <div className="container py-5">
         {/* Back Button */}
-      <div className="mb-4">
-        <BackButton
-          label="← Back"
-          fallbackHref="/events"
-        />
-      </div>
+        <div className="mb-4">
+          <BackButton
+            label="← Back"
+            fallbackHref="/events"
+          />
+        </div>
 
         {/* Page header – match Standings look */}
         <div className="row mb-5 text-center">
           <div className="col">
             <h1 className="fw-bold text-white mb-2">{tournament.name}</h1>
             <p className="ca-section-subtitle">{tournament.game}</p>
-          </div>  
+          </div>
         </div>
 
         {/* Event Info */}
@@ -176,7 +180,7 @@ export default async function EventDetailsPage({
           </p>
           <p>
             <span className="fw-bold">Start Date:</span>{" "}
-            {tournament.startDate.toDateString()}
+            {formattedStart}
           </p>
           <p>
             <span className="fw-bold">Status:</span> {tournament.status}
@@ -251,7 +255,10 @@ export default async function EventDetailsPage({
                     <tr key={match.id}>
                       <td className="text-center">{match.roundNumber}</td>
                       <td>
-                        <Link href={`/match/${match.id}`} className="text-decoration-none text-light">
+                        <Link
+                          href={`/match/${match.id}`}
+                          className="text-decoration-none text-light"
+                        >
                           {match.p1?.user?.name ??
                             match.p1?.team?.name ??
                             "TBD"}{" "}
