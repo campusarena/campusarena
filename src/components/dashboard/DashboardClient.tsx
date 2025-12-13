@@ -65,7 +65,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
 
         {/* ---------- MAIN DASHBOARD CARD ---------- */}
         <Row className="justify-content-center">
-          <Col md={10} lg={8}>
+          <Col md={10} lg={12}>
             <Card className="ca-hero-card">
               <Card.Body>
                 {/* ----- TOP ROW: ACTIVE EVENTS + UPCOMING MATCHES ----- */}
