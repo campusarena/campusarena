@@ -29,24 +29,53 @@ export async function GET() {
         reportedBy: {
           select: {
             email: true,
+            name: true,
           },
         },
         match: {
           include: {
             p1: {
               include: {
+                user: {
+                  select: {
+                    name: true,
+                  },
+                },
                 team: {
                   select: {
                     name: true,
+                    members: {
+                      select: {
+                        user: {
+                          select: {
+                            name: true,
+                          },
+                        },
+                      },
+                    },
                   },
                 },
               },
             },
             p2: {
               include: {
+                user: {
+                  select: {
+                    name: true,
+                  },
+                },
                 team: {
                   select: {
                     name: true,
+                    members: {
+                      select: {
+                        user: {
+                          select: {
+                            name: true,
+                          },
+                        },
+                      },
+                    },
                   },
                 },
               },

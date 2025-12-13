@@ -19,12 +19,15 @@ model User {
   submittedReports    MatchReport[]         @relation("ReportedByUser")
   participants        Participant[]
   teamMemberships     TeamMember[]
+  gameRatings         PlayerGameRating[]
 }
 
 model Tournament {
   id              Int                   @id @default(autoincrement())
   name            String
   game            String
+  supportedGameId Int?
+  seedBySkill     Boolean               @default(false)
   startDate       DateTime
   endDate         DateTime?
   status          String                @default("upcoming")
@@ -41,6 +44,35 @@ model Tournament {
   matches         Match[]
   participants    Participant[]
   teams           Team[]
+
+  supportedGame   Game?                 @relation(fields: [supportedGameId], references: [id], onDelete: SetNull)
+}
+
+model Game {
+  id         Int          @id @default(autoincrement())
+  key        String       @unique
+  name       String
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  tournaments Tournament[]
+  ratings    PlayerGameRating[]
+}
+
+model PlayerGameRating {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  gameId      Int
+  rating      Int      @default(1500)
+  gamesPlayed Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+  @@index([gameId])
 }
 
 model Team {

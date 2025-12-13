@@ -6,7 +6,16 @@ import Link from 'next/link';
 import { adminDeleteTournamentAction } from '@/lib/adminActions';
 import ConfirmActionForm from '@/components/ConfirmActionForm';
 
-export default async function AdminEventsPage() {
+export default async function AdminEventsPage({
+  searchParams,
+}: {
+  searchParams?: { q?: string };
+}) {
+  const qRaw = (searchParams?.q ?? '').trim();
+  const q = qRaw.length > 0 ? qRaw : null;
+  const qAsNumber = q ? Number(q) : NaN;
+  const qIsNumber = q ? Number.isFinite(qAsNumber) : false;
+
   const tournaments = await prisma.tournament.findMany({
     select: {
       id: true,
@@ -18,6 +27,16 @@ export default async function AdminEventsPage() {
       endDate: true,
       _count: { select: { participants: true, staff: true } },
     },
+    where:
+      q === null
+        ? undefined
+        : {
+            OR: [
+              ...(qIsNumber ? [{ id: qAsNumber }] : []),
+              { name: { contains: q, mode: 'insensitive' } },
+              { game: { contains: q, mode: 'insensitive' } },
+            ],
+          },
     orderBy: [{ createdAt: 'desc' }],
   });
 
@@ -36,6 +55,29 @@ export default async function AdminEventsPage() {
       </div>
 
       <Card className="ca-feature-card p-3">
+        <form method="get" className="d-flex gap-2 flex-wrap align-items-end mb-3">
+          <div className="flex-grow-1" style={{ minWidth: 240 }}>
+            <label className="text-white form-label">Search events</label>
+            <input
+              name="q"
+              defaultValue={qRaw}
+              placeholder="Search by name, game, or ID"
+              className="form-control ca-auth-input"
+            />
+          </div>
+          <button type="submit" className="btn btn-outline-light btn-sm ca-glass-button">
+            Search
+          </button>
+          {q && (
+            <Link href="/admin/events" className="btn btn-outline-light btn-sm">
+              Clear
+            </Link>
+          )}
+        </form>
+
+        {tournaments.length === 0 ? (
+          <div className="text-muted">No events found.</div>
+        ) : (
         <Table responsive hover variant="dark" className="m-0">
           <thead>
             <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.08)' }}>
@@ -82,6 +124,7 @@ export default async function AdminEventsPage() {
             ))}
           </tbody>
         </Table>
+        )}
       </Card>
     </>
   );
