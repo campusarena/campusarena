@@ -44,26 +44,24 @@ export async function getDashboardDataForUser(
 
   const userName = user?.name ?? user?.email ?? '';
 
-  // 1️⃣ Tournaments this user is playing in
+  // 1️⃣ Tournaments this user is registered in (directly or via team membership)
   const participantRows = await prisma.participant.findMany({
     where: {
-      userId,
       tournament: {
         status: { not: 'completed' },
       },
-    },
-    include: {
-      tournament: true,
-    },
-  });
-
-  // 2️⃣ Tournaments this user organizes (OWNER or ORGANIZER)
-  const organizerRoles = await prisma.eventRoleAssignment.findMany({
-    where: {
-      userId,
-      tournament: {
-        status: { not: 'completed' },
-      },
+      OR: [
+        { userId },
+        {
+          team: {
+            members: {
+              some: {
+                userId,
+              },
+            },
+          },
+        },
+      ],
     },
     include: {
       tournament: true,
@@ -80,16 +78,9 @@ export async function getDashboardDataForUser(
     kind: inferEventKind(),
   }));
 
-  // Events as organizer
-  const eventsAsOrganizer: DashboardEvent[] = organizerRoles.map((r) => ({
-    id: String(r.tournament.id),
-    name: r.tournament.name,
-    kind: inferEventKind(),
-  }));
-
-  // Deduplicate events (user might be both player and organizer)
+  // Deduplicate events
   const eventMap = new Map<string, DashboardEvent>();
-  [...eventsAsPlayer, ...eventsAsOrganizer].forEach((ev) => {
+  eventsAsPlayer.forEach((ev) => {
     eventMap.set(ev.id, ev);
   });
   const activeEvents = Array.from(eventMap.values());
@@ -117,14 +108,7 @@ export async function getDashboardDataForUser(
       orderBy: { scheduledAt: 'asc' },
     });
 
-    // Extra safety: only matches where THIS user is p1 or p2
-    const upcomingMatchRows = upcomingMatchRowsRaw.filter(
-      (m) =>
-        (m.p1 && m.p1.userId === userId) ||
-        (m.p2 && m.p2.userId === userId),
-    );
-
-    upcomingMatches = upcomingMatchRows.map((m) => ({
+    upcomingMatches = upcomingMatchRowsRaw.map((m) => ({
       id: String(m.id),
       name: m.tournament.name,
       date: m.scheduledAt ? m.scheduledAt.toLocaleDateString() : 'TBD',
