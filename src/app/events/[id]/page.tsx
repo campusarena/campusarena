@@ -10,6 +10,7 @@ import authOptions from '@/lib/authOptions';
 import BackButton from "@/components/BackButton";
 import { CheckInButton } from './CheckInButton';
 import EditMatchScoreClient, { type EditableMatchSummary } from './EditMatchScoreClient';
+import TeamsCardClient from './TeamsCardClient';
 
 interface EventDetailsParams {
   id: string;
@@ -32,6 +33,17 @@ export default async function EventDetailsPage({
       participants: {
         include: { user: true, team: true },
         orderBy: { seed: "asc" },
+      },
+      teams: {
+        orderBy: { createdAt: 'asc' },
+        include: {
+          members: {
+            orderBy: { isCaptain: 'desc' },
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+          },
+        },
       },
       matches: {
         include: {
@@ -166,12 +178,31 @@ export default async function EventDetailsPage({
       p2Label: m.p2?.user?.name ?? m.p2?.team?.name ?? 'TBD',
     }));
 
-  // Determine if the current user is a participant and whether they are checked in.
-  const currentUserParticipant = currentUserId
-    ? tournament.participants.find((p) => p.userId === currentUserId)
-    : undefined;
-  const isParticipant = !!currentUserParticipant;
-  const isCheckedIn = !!currentUserParticipant?.checkedIn;
+  // Determine if the current user is a participant (individual or team-member) and whether they are checked in.
+  let isParticipant = false;
+  let isCheckedIn = false;
+
+  if (currentUserId) {
+    if (tournament.isTeamBased) {
+      const teamParticipant = await prisma.participant.findFirst({
+        where: {
+          tournamentId: tournament.id,
+          team: {
+            members: {
+              some: { userId: currentUserId },
+            },
+          },
+        },
+        select: { checkedIn: true },
+      });
+      isParticipant = !!teamParticipant;
+      isCheckedIn = !!teamParticipant?.checkedIn;
+    } else {
+      const currentUserParticipant = tournament.participants.find((p) => p.userId === currentUserId);
+      isParticipant = !!currentUserParticipant;
+      isCheckedIn = !!currentUserParticipant?.checkedIn;
+    }
+  }
 
   return (
     <section className="ca-standings-page">
@@ -204,6 +235,9 @@ export default async function EventDetailsPage({
           </p>
           <p>
             <span className="fw-bold">Status:</span> {tournament.status}
+          </p>
+          <p>
+            <span className="fw-bold">Event Type:</span> {tournament.isTeamBased ? 'Team' : 'Solo'}
           </p>
 
           {canManageEventStatus && (
@@ -254,6 +288,17 @@ export default async function EventDetailsPage({
             </form>
           )}
 
+          {hasOrganizerAccess && tournament.isTeamBased && (
+            <div className="mt-3">
+              <Link
+                href={`/events/${tournament.id}/teams`}
+                className="btn btn-sm btn-outline-light ca-glass-button"
+              >
+                Manage Teams
+              </Link>
+            </div>
+          )}
+
           {canEditMatchScores && editableMatches.length > 0 && (
             <EditMatchScoreClient matches={editableMatches} />
           )}
@@ -275,6 +320,23 @@ export default async function EventDetailsPage({
             </div>
           )}
         </div>
+
+        {tournament.isTeamBased && (
+          <div className="ca-feature-card mb-4 p-4">
+            <h3 className="text-white mb-3">Teams</h3>
+            <TeamsCardClient
+              teams={tournament.teams.map((t) => ({
+                id: t.id,
+                name: t.name,
+                members: t.members.map((m) => ({
+                  id: m.user.id,
+                  name: m.user.name,
+                  email: m.user.email,
+                })),
+              }))}
+            />
+          </div>
+        )}
 
         {/* Participants – uses ca-standings-table for zebra rows */}
         <ParticipantsTable participants={participantRecordsForClient} />
