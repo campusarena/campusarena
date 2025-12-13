@@ -137,10 +137,23 @@ export async function acceptInvitation(token: string) {
 
   const invitation = await prisma.invitation.findUnique({
     where: { token },
+    include: {
+      tournament: {
+        select: {
+          id: true,
+          isTeamBased: true,
+          status: true,
+        },
+      },
+    },
   });
 
   if (!invitation) {
     throw new Error('Invitation not found.');
+  }
+
+  if (invitation.tournament.status === 'completed') {
+    throw new Error('This event is completed.');
   }
 
   if (isInvitationExpired(invitation.createdAt)) {
@@ -162,7 +175,25 @@ export async function acceptInvitation(token: string) {
   //   throw new Error('This invite was not sent to your email.');
   // }
 
-  // Ensure user is not already a participant
+  // Team-based tournaments require selecting/creating a team.
+  // We do NOT create a user Participant row.
+  if (invitation.tournament.isTeamBased) {
+    await prisma.invitation.update({
+      where: { token },
+      data: {
+        status: InvitationStatus.ACCEPTED,
+        respondedAt: new Date(),
+      },
+    });
+
+    return {
+      ok: true as const,
+      tournamentId: invitation.tournament.id,
+      needsTeamSelection: true as const,
+    };
+  }
+
+  // Individual tournaments: create a Participant row for this user.
   const existingParticipant = await prisma.participant.findFirst({
     where: {
       tournamentId: invitation.tournamentId,
@@ -174,7 +205,6 @@ export async function acceptInvitation(token: string) {
     throw new Error('You are already a participant in this tournament.');
   }
 
-  // Auto-assign next available seed when a player joins via invite.
   const maxSeedRow = await prisma.participant.findFirst({
     where: { tournamentId: invitation.tournamentId },
     orderBy: { seed: 'desc' },
@@ -191,15 +221,19 @@ export async function acceptInvitation(token: string) {
     },
   });
 
-  // Update invitation to track latest usage, but keep it reusable
   await prisma.invitation.update({
     where: { token },
     data: {
       status: InvitationStatus.ACCEPTED,
       respondedAt: new Date(),
-      // Note: invitedUserId is not updated to allow reuse by multiple users
     },
   });
+
+  return {
+    ok: true as const,
+    tournamentId: invitation.tournamentId,
+    needsTeamSelection: false as const,
+  };
 }
 
 /**
@@ -274,5 +308,5 @@ export async function acceptInvitationByCode(code: string) {
   if (!trimmed) {
     throw new Error('Code is required.');
   }
-  await acceptInvitation(trimmed);
+  return acceptInvitation(trimmed);
 }

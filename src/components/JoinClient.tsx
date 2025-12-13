@@ -2,10 +2,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, Button, Form } from 'react-bootstrap';
 import { acceptInvitationByCode } from '@/lib/invitationActions';
 
 const JoinClient: React.FC = () => {
+  const router = useRouter();
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
@@ -16,7 +18,11 @@ const JoinClient: React.FC = () => {
     setMessage(null);
 
     try {
-      await acceptInvitationByCode(code);
+      const result = await acceptInvitationByCode(code);
+      if (result.needsTeamSelection) {
+        router.push(`/events/${result.tournamentId}/teams/join?token=${code.trim()}`);
+        return;
+      }
       setStatus('success');
       setMessage('You have been added to the event (if the code was valid).');
       setCode('');

@@ -15,8 +15,26 @@ export async function checkInToTournament(tournamentId: number) {
 
   const userId = Number(userIdStr);
 
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { isTeamBased: true },
+  });
+
+  if (!tournament) {
+    return { ok: false as const, error: 'Event not found.' };
+  }
+
   const participant = await prisma.participant.findFirst({
-    where: { tournamentId, userId },
+    where: tournament.isTeamBased
+      ? {
+          tournamentId,
+          team: {
+            members: {
+              some: { userId },
+            },
+          },
+        }
+      : { tournamentId, userId },
   });
 
   if (!participant) {
