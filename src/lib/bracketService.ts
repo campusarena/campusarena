@@ -2,11 +2,26 @@ import { prisma } from '@/lib/prisma';
 import { MatchStatus } from '@prisma/client';
 
 export async function regenerateSingleElimBracket(tournamentId: number) {
+  // Check if any matches are completed before regenerating
+  const hasCompletedMatches = await prisma.match.findFirst({
+    where: {
+      tournamentId,
+      OR: [
+        { status: 'COMPLETE' },
+        { status: 'VERIFIED' },
+        { completedAt: { not: null } },
+      ],
+    },
+  });
+
+  if (hasCompletedMatches) {
+    throw new Error('Cannot regenerate bracket after matches have been completed');
+  }
+
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     include: {
       participants: {
-        where: { checkedIn: true },
         orderBy: { seed: 'asc' },
       },
     },
