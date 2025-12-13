@@ -40,6 +40,19 @@ async function requireUser() {
 
 /** Helper: ensure user is OWNER or ORGANIZER for a tournament */
 async function requireOrganizerForTournament(tournamentId: number, userId: number) {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { status: true },
+  });
+
+  if (!tournament) {
+    throw new Error('Event not found.');
+  }
+
+  if (tournament.status === 'completed') {
+    throw new Error('Cannot generate invite codes for a completed event.');
+  }
+
   // 1) Load the user record
   const user = await prisma.user.findUnique({
     where: { id: userId },

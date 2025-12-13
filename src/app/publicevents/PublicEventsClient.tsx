@@ -22,10 +22,11 @@ type SortBy = 'date' | 'capacity';
 
 type Props = {
   events: PublicEventCardData[];
+  showSortControls?: boolean;
 };
 
 
-export default function PublicEventsClient({ events }: Props) {
+export default function PublicEventsClient({ events, showSortControls = true }: Props) {
   const [sortBy, setSortBy] = useState<SortBy>('date');
 
   const sortedEvents = useMemo(() => {
@@ -66,17 +67,19 @@ export default function PublicEventsClient({ events }: Props) {
         <span className="ca-section-subtitle">
           {events.length} public {events.length === 1 ? 'event' : 'events'} found
         </span>
-        <Form.Select
-          size="sm"
-          style={{ maxWidth: '230px' }}
-          value={sortBy}
-          onChange={(e) =>
-            setSortBy(e.target.value === 'capacity' ? 'capacity' : 'date')
-          }
-        >
-          <option value="date">Sort by date (soonest first)</option>
-          <option value="capacity">Sort by capacity filled</option>
-        </Form.Select>
+        {showSortControls && (
+          <Form.Select
+            size="sm"
+            style={{ maxWidth: '230px' }}
+            value={sortBy}
+            onChange={(e) =>
+              setSortBy(e.target.value === 'capacity' ? 'capacity' : 'date')
+            }
+          >
+            <option value="date">Sort by date (soonest first)</option>
+            <option value="capacity">Sort by capacity filled</option>
+          </Form.Select>
+        )}
       </div>
 
       {/* Event cards */}

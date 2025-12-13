@@ -36,9 +36,14 @@ export default function NavBar() {
 
             {/* Archived only when logged in */}
             {session && (
-              <Link href="/archivedevents" className="nav-link ca-nav-link">
-                Archived
-              </Link>
+              <>
+                <Link href="/archivedevents" className="nav-link ca-nav-link">
+                  Archived Events
+                </Link>
+                <Link href="/archivedmatches" className="nav-link ca-nav-link">
+                  Archived Matches
+                </Link>
+              </>
             )}
           </Nav>
 

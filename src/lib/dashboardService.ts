@@ -46,7 +46,12 @@ export async function getDashboardDataForUser(
 
   // 1️⃣ Tournaments this user is playing in
   const participantRows = await prisma.participant.findMany({
-    where: { userId },
+    where: {
+      userId,
+      tournament: {
+        status: { not: 'completed' },
+      },
+    },
     include: {
       tournament: true,
     },
@@ -54,7 +59,12 @@ export async function getDashboardDataForUser(
 
   // 2️⃣ Tournaments this user organizes (OWNER or ORGANIZER)
   const organizerRoles = await prisma.eventRoleAssignment.findMany({
-    where: { userId },
+    where: {
+      userId,
+      tournament: {
+        status: { not: 'completed' },
+      },
+    },
     include: {
       tournament: true,
     },

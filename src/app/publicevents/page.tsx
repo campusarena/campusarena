@@ -11,7 +11,7 @@ export default async function EventsPage() {
   const tournaments = await prisma.tournament.findMany({
     where: {
       visibility: 'PUBLIC',                         // only public events
-      status: { in: ['upcoming', 'ongoing'] },      // tweak as you like
+      status: 'upcoming',
     },
     include: {
       _count: {

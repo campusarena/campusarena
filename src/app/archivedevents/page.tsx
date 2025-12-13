@@ -7,6 +7,7 @@ import PublicEventsClient, {
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/authOptions';
 import { redirect } from 'next/navigation';
+import { EventRole, Role } from '@prisma/client';
 
 export default async function ArchivedEventsPage() {
   // Require login
@@ -15,10 +16,52 @@ export default async function ArchivedEventsPage() {
     redirect('/auth/signin');
   }
 
+  const currentUser = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true, role: true },
+  });
+
+  if (!currentUser) {
+    redirect('/auth/signin');
+  }
+
+  const isAdmin = currentUser.role === Role.ADMIN;
+
   const tournaments = await prisma.tournament.findMany({
     where: {
-      visibility: 'PUBLIC',
       status: 'completed',
+      ...(isAdmin
+        ? {}
+        : {
+            OR: [
+              {
+                staff: {
+                  some: {
+                    userId: currentUser.id,
+                    role: { in: [EventRole.OWNER, EventRole.ORGANIZER] },
+                  },
+                },
+              },
+              {
+                participants: {
+                  some: {
+                    OR: [
+                      { userId: currentUser.id },
+                      {
+                        team: {
+                          members: {
+                            some: {
+                              userId: currentUser.id,
+                            },
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          }),
     },
     include: {
       _count: { select: { participants: true } },
@@ -54,7 +97,7 @@ export default async function ArchivedEventsPage() {
           View completed events and their final states.
         </p>
 
-        <PublicEventsClient events={events} />
+        <PublicEventsClient events={events} showSortControls={false} />
       </Container>
     </section>
   );
