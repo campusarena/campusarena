@@ -5,6 +5,13 @@ const prisma = new PrismaClient();
 const PLAYER_EMAIL = 'player1@campusarena.test';
 const SEEDED_TOURNAMENT_ID = 1;
 const SEEDED_ELO_TOURNAMENT_ID = 6;
+const SEEDED_TEAM_TOURNAMENT_ID = 8;
+
+const TEAM_EVENT_TOKENS = {
+  player1: 'team-event-8-token-player1',
+  player2: 'team-event-8-token-player2',
+  player3: 'team-event-8-token-player3',
+} as const;
 
 const ELO_PLAYERS: Array<{ email: string; seed: number }> = [
   { email: 'player1@campusarena.test', seed: 2 },
@@ -123,6 +130,113 @@ export async function getTournamentParticipantSeeds(tournamentId: number): Promi
     email: p.user?.email ?? 'unknown',
     seed: p.seed,
   }));
+}
+
+export function getTeamEventJoinToken(email: 'player1' | 'player2' | 'player3'): string {
+  return TEAM_EVENT_TOKENS[email];
+}
+
+export function getTeamEventTournamentId(): number {
+  return SEEDED_TEAM_TOURNAMENT_ID;
+}
+
+export async function resetTeamBasedTournament(): Promise<void> {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: SEEDED_TEAM_TOURNAMENT_ID },
+    select: { id: true },
+  });
+  if (!tournament) {
+    throw new Error(`Missing seeded team-based tournament: ${SEEDED_TEAM_TOURNAMENT_ID}`);
+  }
+
+  await prisma.matchReport.deleteMany({
+    where: { match: { tournamentId: SEEDED_TEAM_TOURNAMENT_ID } },
+  });
+  await prisma.match.deleteMany({
+    where: { tournamentId: SEEDED_TEAM_TOURNAMENT_ID },
+  });
+  await prisma.participant.deleteMany({
+    where: { tournamentId: SEEDED_TEAM_TOURNAMENT_ID },
+  });
+  await prisma.teamMember.deleteMany({
+    where: { team: { tournamentId: SEEDED_TEAM_TOURNAMENT_ID } },
+  });
+  await prisma.team.deleteMany({
+    where: { tournamentId: SEEDED_TEAM_TOURNAMENT_ID },
+  });
+  await prisma.invitation.deleteMany({
+    where: { tournamentId: SEEDED_TEAM_TOURNAMENT_ID },
+  });
+
+  const users = await prisma.user.findMany({
+    where: {
+      email: {
+        in: [
+          'organizer@campusarena.test',
+          'player1@campusarena.test',
+          'player2@campusarena.test',
+          'player3@campusarena.test',
+        ],
+      },
+    },
+    select: { id: true, email: true },
+  });
+
+  const byEmail = new Map(users.map((u) => [u.email, u.id] as const));
+  const organizerId = byEmail.get('organizer@campusarena.test');
+  const player1Id = byEmail.get('player1@campusarena.test');
+  const player2Id = byEmail.get('player2@campusarena.test');
+  const player3Id = byEmail.get('player3@campusarena.test');
+
+  if (!organizerId || !player1Id || !player2Id || !player3Id) {
+    throw new Error('Missing seeded users for team-based tournament reset');
+  }
+
+  const seededTeam = await prisma.team.create({
+    data: {
+      tournamentId: SEEDED_TEAM_TOURNAMENT_ID,
+      name: 'Seed Team Alpha',
+    },
+    select: { id: true },
+  });
+
+  await prisma.participant.create({
+    data: {
+      tournamentId: SEEDED_TEAM_TOURNAMENT_ID,
+      teamId: seededTeam.id,
+      seed: 1,
+      checkedIn: true,
+    },
+  });
+
+  await prisma.invitation.createMany({
+    data: [
+      {
+        tournamentId: SEEDED_TEAM_TOURNAMENT_ID,
+        invitedById: organizerId,
+        invitedUserId: player1Id,
+        invitedEmail: 'player1@campusarena.test',
+        token: TEAM_EVENT_TOKENS.player1,
+        status: 'PENDING',
+      },
+      {
+        tournamentId: SEEDED_TEAM_TOURNAMENT_ID,
+        invitedById: organizerId,
+        invitedUserId: player2Id,
+        invitedEmail: 'player2@campusarena.test',
+        token: TEAM_EVENT_TOKENS.player2,
+        status: 'PENDING',
+      },
+      {
+        tournamentId: SEEDED_TEAM_TOURNAMENT_ID,
+        invitedById: organizerId,
+        invitedUserId: player3Id,
+        invitedEmail: 'player3@campusarena.test',
+        token: TEAM_EVENT_TOKENS.player3,
+        status: 'PENDING',
+      },
+    ],
+  });
 }
 
 export async function disconnectTestDb(): Promise<void> {

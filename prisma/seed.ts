@@ -253,7 +253,7 @@ async function main() {
 
   // Clean up any existing test data for our known tournaments so
   // repeated seeds stay deterministic and don't accumulate rows.
-  const seedTournamentIds = [1, 2, 3, 4, 5, 6, 7];
+  const seedTournamentIds = [1, 2, 3, 4, 5, 6, 7, 8];
 
   // Delete child records that depend on tournaments 1-3.
   await prisma.matchReport.deleteMany({
@@ -1106,6 +1106,106 @@ async function main() {
   });
 
   console.log('Extra public event fixture created (id=7).');
+
+  // ---------------------------------------------------------------------------
+  // 8. PUBLIC, UPCOMING team-based event (id=8)
+  //    - seed a starter team
+  //    - seed join tokens for Playwright team-flow tests
+  // ---------------------------------------------------------------------------
+  const teamBasedTournament = await prisma.tournament.upsert({
+    where: { id: 8 },
+    update: {
+      name: 'Public Team Event',
+      game: 'VALORANT',
+      format: EventFormat.SINGLE_ELIM,
+      isTeamBased: true,
+      status: 'upcoming',
+      visibility: 'PUBLIC',
+      maxParticipants: 8,
+      location: 'UH Mānoa Campus - Team Arena',
+    },
+    create: {
+      name: 'Public Team Event',
+      game: 'VALORANT',
+      format: EventFormat.SINGLE_ELIM,
+      isTeamBased: true,
+      startDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+      status: 'upcoming',
+      maxParticipants: 8,
+      location: 'UH Mānoa Campus - Team Arena',
+      visibility: 'PUBLIC',
+      autoBracket: false,
+    },
+  });
+
+  await prisma.eventRoleAssignment.upsert({
+    where: {
+      tournamentId_userId_role: {
+        tournamentId: teamBasedTournament.id,
+        userId: organizerUser.id,
+        role: EventRole.OWNER,
+      },
+    },
+    update: {},
+    create: {
+      tournamentId: teamBasedTournament.id,
+      userId: organizerUser.id,
+      role: EventRole.OWNER,
+    },
+  });
+
+  const seededTeam = await prisma.team.create({
+    data: {
+      tournamentId: teamBasedTournament.id,
+      name: 'Seed Team Alpha',
+    },
+    select: { id: true },
+  });
+
+  await prisma.participant.create({
+    data: {
+      tournamentId: teamBasedTournament.id,
+      teamId: seededTeam.id,
+      seed: 1,
+      checkedIn: true,
+    },
+  });
+
+  // Multiple tokens so tests can perform multiple actions without re-seeding.
+  await Promise.all([
+    prisma.invitation.create({
+      data: {
+        tournamentId: teamBasedTournament.id,
+        invitedById: organizerUser.id,
+        invitedUserId: player1.id,
+        invitedEmail: player1.email,
+        token: 'team-event-8-token-player1',
+        status: 'PENDING',
+      },
+    }),
+    prisma.invitation.create({
+      data: {
+        tournamentId: teamBasedTournament.id,
+        invitedById: organizerUser.id,
+        invitedUserId: player2.id,
+        invitedEmail: player2.email,
+        token: 'team-event-8-token-player2',
+        status: 'PENDING',
+      },
+    }),
+    prisma.invitation.create({
+      data: {
+        tournamentId: teamBasedTournament.id,
+        invitedById: organizerUser.id,
+        invitedUserId: player3.id,
+        invitedEmail: player3.email,
+        token: 'team-event-8-token-player3',
+        status: 'PENDING',
+      },
+    }),
+  ]);
+
+  console.log('Team-based public event fixture created (id=8).');
 
   console.log('Completed double-elim tournament seed complete:');
   console.log(`  Tournament: ${completedDoubleElim.name} (id=${completedDoubleElim.id}), players=${participants.length}`);
