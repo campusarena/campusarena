@@ -393,3 +393,49 @@
     0 12px 28px rgba(0, 0, 0, 0.55),
     0 0 0 1px rgba(255, 255, 255, 0.03) inset;
 }
+
+/* =========================================================
+   EVENT STANDINGS PODIUM (1st / 2nd / 3rd)
+   ========================================================= */
+
+.ca-place-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.ca-place-pill-1 {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #111827;
+}
+
+.ca-place-pill-2 {
+  background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+  color: #111827;
+}
+
+.ca-place-pill-3 {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #111827;
+}
+
+/* Subtle row highlight for podium spots (plays nicely with zebra striping) */
+.ca-standings-row-first > * {
+  background-color: rgba(251, 191, 36, 0.15) !important;
+  font-weight: 600;
+}
+
+.ca-standings-row-second > * {
+  background-color: rgba(229, 231, 235, 0.06) !important;
+}
+
+.ca-standings-row-third > * {
+  background-color: rgba(249, 115, 22, 0.10) !important;
+}
+
