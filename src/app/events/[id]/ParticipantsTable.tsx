@@ -17,7 +17,7 @@ interface ParticipantsTableProps {
 }
 
 export default function ParticipantsTable({ participants }: ParticipantsTableProps) {
-  const [sortMode, setSortMode] = useState<SortMode>("seed");
+  const [sortMode, setSortMode] = useState<SortMode>("record");
 
   // 🔹 Always compute standings order by record (wins desc, losses asc, seed asc)
   const recordSorted = [...participants].sort((a, b) => {
