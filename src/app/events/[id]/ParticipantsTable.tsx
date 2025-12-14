@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-type SortMode = "seed" | "record";
+type SortMode = "seed" | "record" | "name";
 
 type ParticipantRecord = {
   participantId: number;
@@ -44,6 +43,15 @@ export default function ParticipantsTable({ participants }: ParticipantsTablePro
       return seedA - seedB;
     }
 
+    if (sortMode === "name") {
+      const an = (a.name ?? "").toLowerCase();
+      const bn = (b.name ?? "").toLowerCase();
+      if (an < bn) return -1;
+      if (an > bn) return 1;
+      return (a.seed ?? Number.POSITIVE_INFINITY) -
+        (b.seed ?? Number.POSITIVE_INFINITY);
+    }
+
     // "record" mode uses same comparator as recordSorted
     if (b.wins !== a.wins) return b.wins - a.wins;
     if (a.losses !== b.losses) return a.losses - b.losses;
@@ -80,6 +88,7 @@ export default function ParticipantsTable({ participants }: ParticipantsTablePro
           >
             <option value="seed">Seed</option>
             <option value="record">Record (W-L)</option>
+            <option value="name">Player / Team (A-Z)</option>
           </select>
         </div>
       </div>
