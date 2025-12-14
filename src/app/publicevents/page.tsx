@@ -6,12 +6,14 @@ import PublicEventsClient, {
 } from '@/app/publicevents/PublicEventsClient';
 import BackButton from "@/components/BackButton";
 
+export const dynamic = 'force-dynamic';
+
 export default async function EventsPage() {
   // Grab all public tournaments
   const tournaments = await prisma.tournament.findMany({
     where: {
       visibility: 'PUBLIC',                         // only public events
-      status: 'upcoming',
+      status: { in: ['upcoming', 'ongoing'] },
     },
     include: {
       _count: {
