@@ -39,17 +39,25 @@ export default function PublicEventsClient({ events, showSortControls = true }: 
         return da - db; // soonest first
       });
     } else {
-      // sort by percentage filled (desc)
+      // sort by emptiest first (lowest fill ratio)
       copy.sort((a, b) => {
-        const ua =
-          a.maxParticipants && a.maxParticipants > 0
-            ? a.participantCount / a.maxParticipants
-            : 0;
-        const ub =
-          b.maxParticipants && b.maxParticipants > 0
-            ? b.participantCount / b.maxParticipants
-            : 0;
-        return ub - ua;
+        const hasCapA = a.maxParticipants != null && a.maxParticipants > 0;
+        const hasCapB = b.maxParticipants != null && b.maxParticipants > 0;
+
+        // Prefer events with a defined capacity so "emptiness" is meaningful
+        if (hasCapA !== hasCapB) return hasCapA ? -1 : 1;
+
+        const fillA = hasCapA ? a.participantCount / (a.maxParticipants as number) : Number.POSITIVE_INFINITY;
+        const fillB = hasCapB ? b.participantCount / (b.maxParticipants as number) : Number.POSITIVE_INFINITY;
+        if (fillA !== fillB) return fillA - fillB;
+
+        const remainingA = hasCapA ? (a.maxParticipants as number) - a.participantCount : Number.NEGATIVE_INFINITY;
+        const remainingB = hasCapB ? (b.maxParticipants as number) - b.participantCount : Number.NEGATIVE_INFINITY;
+        if (remainingA !== remainingB) return remainingB - remainingA;
+
+        const da = a.date ? new Date(a.date).getTime() : Number.POSITIVE_INFINITY;
+        const db = b.date ? new Date(b.date).getTime() : Number.POSITIVE_INFINITY;
+        return da - db;
       });
     }
 
@@ -77,7 +85,7 @@ export default function PublicEventsClient({ events, showSortControls = true }: 
             }
           >
             <option value="date">Sort by date (soonest first)</option>
-            <option value="capacity">Sort by capacity filled</option>
+            <option value="capacity">Sort by capacity (emptiest first)</option>
           </Form.Select>
         )}
       </div>
