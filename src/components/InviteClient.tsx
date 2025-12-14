@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Invitation, Tournament, User } from '@prisma/client';
 import { Card, Button } from 'react-bootstrap';
 import { acceptInvitation, declineInvitation } from '@/lib/invitationActions';
@@ -15,6 +16,7 @@ type Props = {
 };
 
 const InviteClient: React.FC<Props> = ({ invitation }) => {
+  const router = useRouter();
   const [status, setStatus] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
 
@@ -22,7 +24,12 @@ const InviteClient: React.FC<Props> = ({ invitation }) => {
     setStatus('working');
     setMessage(null);
     try {
-      await acceptInvitation(invitation.token);
+      const result = await acceptInvitation(invitation.token);
+      if (result.needsTeamSelection) {
+        router.push(`/events/${result.tournamentId}/teams/join?token=${invitation.token}`);
+        return;
+      }
+
       setMessage('You are now registered for this event.');
       setStatus('done');
     } catch (err) {

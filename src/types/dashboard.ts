@@ -7,6 +7,10 @@ export type DashboardEvent = {
   id: string;
   name: string;
   kind: EventKind;
+
+  // NEW FIELDS:
+  game: string;        // e.g. "Valorant", "Smash Ultimate"
+  roleLabel: string;   // e.g. "Player", "Organizer", "Organizer and player"
 };
 
 export type DashboardMatch = {

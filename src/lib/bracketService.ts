@@ -1,12 +1,35 @@
 import { prisma } from '@/lib/prisma';
-import { MatchStatus } from '@prisma/client';
+import { BracketSide, MatchSlot, MatchStatus } from '@prisma/client';
+import { autoAdvanceTournamentByes } from '@/lib/byeService';
+
+function nextPowerOfTwo(n: number) {
+  if (n <= 1) return 1;
+  let p = 1;
+  while (p < n) p *= 2;
+  return p;
+}
 
 export async function regenerateSingleElimBracket(tournamentId: number) {
+  // Check if any matches are completed before regenerating
+  const hasCompletedMatches = await prisma.match.findFirst({
+    where: {
+      tournamentId,
+      OR: [
+        { status: 'COMPLETE' },
+        { status: 'VERIFIED' },
+        { completedAt: { not: null } },
+      ],
+    },
+  });
+
+  if (hasCompletedMatches) {
+    throw new Error('Cannot regenerate bracket after matches have been completed');
+  }
+
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     include: {
       participants: {
-        where: { checkedIn: true },
         orderBy: { seed: 'asc' },
       },
     },
@@ -16,20 +39,33 @@ export async function regenerateSingleElimBracket(tournamentId: number) {
     throw new Error('Tournament not found');
   }
 
+  const participants = tournament.participants.filter((p) => p.checkedIn);
+  if (participants.length === 0) {
+    throw new Error('No checked-in participants to seed into the bracket');
+  }
+
   // Delete existing matches for this tournament so we can regenerate
   await prisma.match.deleteMany({ where: { tournamentId } });
 
-  const participants = tournament.participants;
-  if (participants.length === 0) return;
-
   const N = participants.length;
+  const bracketSize = nextPowerOfTwo(N);
+  const byeCount = bracketSize - N;
+
   const rounds: { p1Id: number | null; p2Id: number | null }[][] = [];
 
-  // Build first round pairings from current participants.
+  // Build first round pairings with byes: top seeds get byes.
   const firstRound: { p1Id: number | null; p2Id: number | null }[] = [];
-  for (let i = 0; i < N; i += 2) {
-    const p1 = participants[i];
-    const p2 = participants[i + 1];
+  const firstRoundMatchCount = bracketSize / 2;
+  let idx = 0;
+
+  for (let m = 0; m < byeCount; m += 1) {
+    const p1 = participants[idx++];
+    firstRound.push({ p1Id: p1?.id ?? null, p2Id: null });
+  }
+
+  while (firstRound.length < firstRoundMatchCount) {
+    const p1 = participants[idx++];
+    const p2 = participants[idx++];
     firstRound.push({ p1Id: p1?.id ?? null, p2Id: p2?.id ?? null });
   }
   rounds.push(firstRound);
@@ -60,6 +96,7 @@ export async function regenerateSingleElimBracket(tournamentId: number) {
           tournamentId,
           roundNumber: roundIndex + 1,
           slotIndex: slotIndex + 1,
+          bracket: BracketSide.WINNERS,
           p1Id: pairing.p1Id ?? undefined,
           p2Id: pairing.p2Id ?? undefined,
           status: MatchStatus.PENDING,
@@ -80,11 +117,245 @@ export async function regenerateSingleElimBracket(tournamentId: number) {
     for (let i = 0; i < current.length; i += 1) {
       const parentIndex = Math.floor(i / 2);
       const parentId = next[parentIndex];
+      const nextMatchSlot = i % 2 === 0 ? MatchSlot.P1 : MatchSlot.P2;
 
       await prisma.match.update({
         where: { id: current[i] },
-        data: { nextMatchId: parentId },
+        data: { nextMatchId: parentId, nextMatchSlot },
       });
     }
   }
+
+  // Auto-advance true byes (matches with only one participant and no inbound).
+  await autoAdvanceTournamentByes(tournamentId);
+}
+
+export async function regenerateDoubleElimBracket(tournamentId: number) {
+  const hasCompletedMatches = await prisma.match.findFirst({
+    where: {
+      tournamentId,
+      OR: [
+        { status: 'COMPLETE' },
+        { status: 'VERIFIED' },
+        { completedAt: { not: null } },
+      ],
+    },
+  });
+
+  if (hasCompletedMatches) {
+    throw new Error('Cannot regenerate bracket after matches have been completed');
+  }
+
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      participants: {
+        orderBy: { seed: 'asc' },
+      },
+    },
+  });
+
+  if (!tournament) {
+    throw new Error('Tournament not found');
+  }
+
+  const participants = tournament.participants.filter((p) => p.checkedIn);
+  if (participants.length < 2) {
+    throw new Error('Not enough checked-in participants to seed into the bracket');
+  }
+
+  const N = participants.length;
+  const bracketSize = nextPowerOfTwo(N);
+
+  // Delete existing matches for this tournament so we can regenerate
+  await prisma.match.deleteMany({ where: { tournamentId } });
+
+  const winnersIds: number[][] = [];
+  const winnersRound1IsBye: boolean[] = [];
+
+  // Winners Round 1 (with byes): top seeds get byes.
+  const w1Ids: number[] = [];
+  const firstRoundMatchCount = bracketSize / 2;
+  const byeCount = bracketSize - N;
+  let idx = 0;
+
+  for (let m = 0; m < firstRoundMatchCount; m += 1) {
+    const isBye = m < byeCount;
+    const p1 = participants[idx++];
+    const p2 = isBye ? undefined : participants[idx++];
+    const match = await prisma.match.create({
+      data: {
+        tournamentId,
+        bracket: BracketSide.WINNERS,
+        roundNumber: 1,
+        slotIndex: m + 1,
+        p1Id: p1?.id ?? undefined,
+        p2Id: p2?.id ?? undefined,
+        status: MatchStatus.PENDING,
+      },
+    });
+    w1Ids.push(match.id);
+    winnersRound1IsBye.push(isBye);
+  }
+  winnersIds.push(w1Ids);
+
+  // Remaining winners rounds
+  let roundMatchCount = w1Ids.length;
+  let winnersRoundNumber = 1;
+  while (roundMatchCount > 1) {
+    winnersRoundNumber += 1;
+    roundMatchCount = Math.floor(roundMatchCount / 2);
+    const ids: number[] = [];
+    for (let i = 0; i < roundMatchCount; i += 1) {
+      const match = await prisma.match.create({
+        data: {
+          tournamentId,
+          bracket: BracketSide.WINNERS,
+          roundNumber: winnersRoundNumber,
+          slotIndex: i + 1,
+          status: MatchStatus.PENDING,
+        },
+      });
+      ids.push(match.id);
+    }
+    winnersIds.push(ids);
+  }
+
+  const k = winnersIds.length; // number of winners rounds
+
+  // Create losers rounds: 2k-2 rounds
+  const losersIds: number[][] = [];
+  const losersRoundCount = 2 * k - 2;
+  for (let lbRound = 1; lbRound <= losersRoundCount; lbRound += 1) {
+    const r = Math.floor((lbRound + 1) / 2); // groups (1,2)->1; (3,4)->2...
+    const matchCount = bracketSize / 2 ** (r + 1);
+    const ids: number[] = [];
+    for (let i = 0; i < matchCount; i += 1) {
+      const match = await prisma.match.create({
+        data: {
+          tournamentId,
+          bracket: BracketSide.LOSERS,
+          roundNumber: lbRound,
+          slotIndex: i + 1,
+          status: MatchStatus.PENDING,
+        },
+      });
+      ids.push(match.id);
+    }
+    losersIds.push(ids);
+  }
+
+  // Finals: grand finals match 1 & (potential) reset match 2
+  const grandFinal1 = await prisma.match.create({
+    data: {
+      tournamentId,
+      bracket: BracketSide.FINALS,
+      roundNumber: 1,
+      slotIndex: 1,
+      status: MatchStatus.PENDING,
+    },
+  });
+  const grandFinal2 = await prisma.match.create({
+    data: {
+      tournamentId,
+      bracket: BracketSide.FINALS,
+      roundNumber: 2,
+      slotIndex: 1,
+      status: MatchStatus.PENDING,
+    },
+  });
+
+  // Wire winners bracket (winner advancement)
+  for (let roundIndex = 0; roundIndex < winnersIds.length - 1; roundIndex += 1) {
+    const current = winnersIds[roundIndex];
+    const next = winnersIds[roundIndex + 1];
+    for (let i = 0; i < current.length; i += 1) {
+      const parentId = next[Math.floor(i / 2)];
+      const nextMatchSlot = i % 2 === 0 ? MatchSlot.P1 : MatchSlot.P2;
+      await prisma.match.update({
+        where: { id: current[i] },
+        data: { nextMatchId: parentId, nextMatchSlot },
+      });
+    }
+  }
+
+  // Wire losers from winners R1 -> losers R1 (fills P1/P2)
+  for (let i = 0; i < winnersIds[0].length; i += 1) {
+    if (winnersRound1IsBye[i]) {
+      // Byes have no loser; do not create an inbound loser edge.
+      continue;
+    }
+    const targetId = losersIds[0][Math.floor(i / 2)];
+    const loserNextMatchSlot = i % 2 === 0 ? MatchSlot.P1 : MatchSlot.P2;
+    await prisma.match.update({
+      where: { id: winnersIds[0][i] },
+      data: { loserNextMatchId: targetId, loserNextMatchSlot },
+    });
+  }
+
+  // Wire losers from winners R2..Rk -> losers even rounds (always fill P2)
+  for (let r = 2; r <= k; r += 1) {
+    const winnersRoundIndex = r - 1;
+    const lbRoundEven = 2 * r - 2;
+    const lbIndex = lbRoundEven - 1;
+    for (let i = 0; i < winnersIds[winnersRoundIndex].length; i += 1) {
+      await prisma.match.update({
+        where: { id: winnersIds[winnersRoundIndex][i] },
+        data: { loserNextMatchId: losersIds[lbIndex][i], loserNextMatchSlot: MatchSlot.P2 },
+      });
+    }
+  }
+
+  // Wire losers bracket progression
+  // For each r (1..k-1):
+  //  - even round 2r: winners of odd round 2r-1 advance into P1
+  //  - odd round (2r+1) gets winners of even round 2r (paired)
+  for (let r = 1; r <= k - 1; r += 1) {
+    const oddIndex = (2 * r - 1) - 1;
+    const evenIndex = (2 * r) - 1;
+
+    // odd -> even (same index), fill P1
+    for (let i = 0; i < losersIds[oddIndex].length; i += 1) {
+      await prisma.match.update({
+        where: { id: losersIds[oddIndex][i] },
+        data: { nextMatchId: losersIds[evenIndex][i], nextMatchSlot: MatchSlot.P1 },
+      });
+    }
+
+    // even -> next odd (pair), except after last even round
+    const nextOddRound = 2 * r + 1;
+    if (nextOddRound <= losersRoundCount) {
+      const nextOddIndex = nextOddRound - 1;
+      for (let i = 0; i < losersIds[evenIndex].length; i += 1) {
+        const parentId = losersIds[nextOddIndex][Math.floor(i / 2)];
+        const nextMatchSlot = i % 2 === 0 ? MatchSlot.P1 : MatchSlot.P2;
+        await prisma.match.update({
+          where: { id: losersIds[evenIndex][i] },
+          data: { nextMatchId: parentId, nextMatchSlot },
+        });
+      }
+    }
+  }
+
+  // Winners bracket champ -> grand final 1 (P1)
+  await prisma.match.update({
+    where: { id: winnersIds[k - 1][0] },
+    data: { nextMatchId: grandFinal1.id, nextMatchSlot: MatchSlot.P1 },
+  });
+
+  // Losers bracket champ (last losers round has 1 match) -> grand final 1 (P2)
+  await prisma.match.update({
+    where: { id: losersIds[losersIds.length - 1][0] },
+    data: { nextMatchId: grandFinal1.id, nextMatchSlot: MatchSlot.P2 },
+  });
+
+  // Wire grand final 1 to grand final 2 (used only when bracket resets)
+  await prisma.match.update({
+    where: { id: grandFinal1.id },
+    data: { nextMatchId: grandFinal2.id },
+  });
+
+  // Auto-advance true byes (including any downstream matches that have
+  // an unfillable slot due to byes).
+  await autoAdvanceTournamentByes(tournamentId);
 }

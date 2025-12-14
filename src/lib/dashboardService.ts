@@ -15,6 +15,7 @@ import {
   type Tournament,
   type User,
   type Team,
+  EventRole,
 } from '@prisma/client';
 
 // Include types with relations for cleaner helpers
@@ -44,17 +45,39 @@ export async function getDashboardDataForUser(
 
   const userName = user?.name ?? user?.email ?? '';
 
-  // 1️⃣ Tournaments this user is playing in
+  // 1️⃣ Tournaments this user is registered in (directly or via team membership)
   const participantRows = await prisma.participant.findMany({
-    where: { userId },
+    where: {
+      tournament: {
+        status: { not: 'completed' },
+      },
+      OR: [
+        { userId },
+        {
+          team: {
+            members: {
+              some: {
+                userId,
+              },
+            },
+          },
+        },
+      ],
+    },
     include: {
       tournament: true,
     },
   });
 
-  // 2️⃣ Tournaments this user organizes (OWNER or ORGANIZER)
-  const organizerRoles = await prisma.eventRoleAssignment.findMany({
-    where: { userId },
+  // 2️⃣ Tournaments this user is staff for (OWNER/ORGANIZER)
+  const staffRows = await prisma.eventRoleAssignment.findMany({
+    where: {
+      userId,
+      role: { in: [EventRole.OWNER, EventRole.ORGANIZER] },
+      tournament: {
+        status: { not: 'completed' },
+      },
+    },
     include: {
       tournament: true,
     },
@@ -68,20 +91,41 @@ export async function getDashboardDataForUser(
     id: String(p.tournament.id),
     name: p.tournament.name,
     kind: inferEventKind(),
+    game: p.tournament.game,
+    roleLabel: 'Player',
   }));
 
-  // Events as organizer
-  const eventsAsOrganizer: DashboardEvent[] = organizerRoles.map((r) => ({
+  // Events as staff
+  const eventsAsStaff: DashboardEvent[] = staffRows.map((r) => ({
     id: String(r.tournament.id),
     name: r.tournament.name,
     kind: inferEventKind(),
+    game: r.tournament.game,
+    roleLabel: 'Organizer',
   }));
 
-  // Deduplicate events (user might be both player and organizer)
+  // Deduplicate events and merge roles (Organizer + Player)
   const eventMap = new Map<string, DashboardEvent>();
-  [...eventsAsPlayer, ...eventsAsOrganizer].forEach((ev) => {
+
+  for (const ev of eventsAsPlayer) {
     eventMap.set(ev.id, ev);
-  });
+  }
+
+  for (const ev of eventsAsStaff) {
+    const existing = eventMap.get(ev.id);
+    if (!existing) {
+      eventMap.set(ev.id, ev);
+    } else {
+      eventMap.set(ev.id, {
+        ...existing,
+        roleLabel:
+          existing.roleLabel === 'Player'
+            ? 'Organizer and player'
+            : existing.roleLabel,
+      });
+    }
+  }
+
   const activeEvents = Array.from(eventMap.values());
 
   // 3️⃣ Upcoming matches (for this user as participant)
@@ -107,14 +151,7 @@ export async function getDashboardDataForUser(
       orderBy: { scheduledAt: 'asc' },
     });
 
-    // Extra safety: only matches where THIS user is p1 or p2
-    const upcomingMatchRows = upcomingMatchRowsRaw.filter(
-      (m) =>
-        (m.p1 && m.p1.userId === userId) ||
-        (m.p2 && m.p2.userId === userId),
-    );
-
-    upcomingMatches = upcomingMatchRows.map((m) => ({
+    upcomingMatches = upcomingMatchRowsRaw.map((m) => ({
       id: String(m.id),
       name: m.tournament.name,
       date: m.scheduledAt ? m.scheduledAt.toLocaleDateString() : 'TBD',

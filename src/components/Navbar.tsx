@@ -7,6 +7,9 @@ import { useSession, signOut } from "next-auth/react";
 export default function NavBar() {
   const { data: session } = useSession();
   const userEmail = session?.user?.email;
+  const isAdmin =
+    (session as unknown as { user?: { randomKey?: string } } | null)?.user
+      ?.randomKey === 'ADMIN';
 
   return (
     <Navbar expand="lg" className="ca-glass-nav">
@@ -33,6 +36,18 @@ export default function NavBar() {
             <Link href="/dashboard" className="nav-link ca-nav-link">
               Dashboard
             </Link>
+
+            {/* Archived only when logged in */}
+            {session && (
+              <>
+                <Link href="/archivedevents" className="nav-link ca-nav-link">
+                  Archived Events
+                </Link>
+                <Link href="/archivedmatches" className="nav-link ca-nav-link">
+                  Archived Matches
+                </Link>
+              </>
+            )}
           </Nav>
 
           {/* ---------- AUTH CONTROLS ---------- */}
@@ -63,6 +78,26 @@ export default function NavBar() {
                 id="user-dropdown"
                 className="ca-nav-dropdown"
               >
+                {isAdmin && (
+                  <>
+                    <NavDropdown.Item as={Link} href="/admin">
+                      Admin Dashboard
+                    </NavDropdown.Item>
+                    <NavDropdown.Item as={Link} href="/admin/users">
+                      Admin Users
+                    </NavDropdown.Item>
+                    <NavDropdown.Item as={Link} href="/admin/events">
+                      Admin Events
+                    </NavDropdown.Item>
+                    <NavDropdown.Item as={Link} href="/admin/verify-matches">
+                      Verify Matches
+                    </NavDropdown.Item>
+                    <NavDropdown.Item as={Link} href="/admin/elo">
+                      Elo Ratings
+                    </NavDropdown.Item>
+                    <NavDropdown.Divider />
+                  </>
+                )}
                 <NavDropdown.Item as={Link} href="/profile">
                   Profile
                 </NavDropdown.Item>

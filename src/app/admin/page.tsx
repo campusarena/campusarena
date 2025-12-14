@@ -1,211 +1,132 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { Col, Container, Row, Table, Button, Badge, Card } from 'react-bootstrap';
 import Link from 'next/link';
+import { prisma } from '@/lib/prisma';
+import PendingMatchApprovalsClient from '@/app/admin/PendingMatchApprovalsClient';
+import Card from 'react-bootstrap/Card';
+import Table from 'react-bootstrap/Table';
 
-interface PendingMatch {
-  id: string;
-  team1Name: string;
-  team2Name: string;
-  team1Score: number;
-  team2Score: number;
-  gameName: string;
-  matchDate: string;
-  matchTime: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedBy?: string;
-}
-
-const AdminPage = () => {
-  const [pendingMatches, setPendingMatches] = useState<PendingMatch[]>([]);
-
-  const loadPendingMatches = () => {
-    const savedPending = localStorage.getItem('campusarena_pending_matches');
-    if (savedPending) {
-      const allMatches = JSON.parse(savedPending);
-      setPendingMatches(allMatches.filter((m: PendingMatch) => m.status === 'pending'));
-    }
-  };
-
-  useEffect(() => {
-    loadPendingMatches();
-    
-    // Refresh data every 2 seconds to catch changes from other tabs
-    const interval = setInterval(loadPendingMatches, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleApproveMatch = (matchId: string) => {
-    const savedPending = localStorage.getItem('campusarena_pending_matches');
-    if (!savedPending) return;
-
-    const allMatches: PendingMatch[] = JSON.parse(savedPending);
-    const match = allMatches.find(m => m.id === matchId);
-    if (!match) return;
-
-    // Update match status to approved
-    const updatedMatches = allMatches.map(m => 
-      m.id === matchId ? { ...m, status: 'approved' as const } : m
-    );
-    localStorage.setItem('campusarena_pending_matches', JSON.stringify(updatedMatches));
-
-    // Update standings
-    const winner = match.team1Score > match.team2Score ? match.team1Name : match.team2Name;
-    const loser = match.team1Score > match.team2Score ? match.team2Name : match.team1Name;
-
-    const savedTeams = localStorage.getItem('campusarena_teams');
-    const teams = savedTeams ? JSON.parse(savedTeams) : [];
-
-    // Update or add winner
-    const winnerIndex = teams.findIndex((t: { name: string; wins: number; losses: number }) => t.name === winner);
-    if (winnerIndex >= 0) {
-      teams[winnerIndex].wins++;
-    } else {
-      teams.push({ name: winner, wins: 1, losses: 0 });
-    }
-
-    // Update or add loser
-    const loserIndex = teams.findIndex((t: { name: string; wins: number; losses: number }) => t.name === loser);
-    if (loserIndex >= 0) {
-      teams[loserIndex].losses++;
-    } else {
-      teams.push({ name: loser, wins: 0, losses: 1 });
-    }
-
-    localStorage.setItem('campusarena_teams', JSON.stringify(teams));
-
-    // Update local state
-    setPendingMatches(prev => prev.filter(m => m.id !== matchId));
-    
-    // Trigger storage event for other tabs
-    window.dispatchEvent(new Event('storage'));
-    
-    alert(`Match approved! ${winner} defeats ${loser}`);
-  };
-
-  const handleRejectMatch = (matchId: string) => {
-    const savedPending = localStorage.getItem('campusarena_pending_matches');
-    if (!savedPending) return;
-
-    const allMatches: PendingMatch[] = JSON.parse(savedPending);
-    const updatedMatches = allMatches.map(m => 
-      m.id === matchId ? { ...m, status: 'rejected' as const } : m
-    );
-    localStorage.setItem('campusarena_pending_matches', JSON.stringify(updatedMatches));
-
-    setPendingMatches(prev => prev.filter(m => m.id !== matchId));
-    
-    // Trigger storage event for other tabs
-    window.dispatchEvent(new Event('storage'));
-    
-    alert('Match rejected');
-  };
+export default async function AdminPage() {
+  const [tournaments, users] = await Promise.all([
+    prisma.tournament.findMany({
+      select: {
+        id: true,
+        name: true,
+        game: true,
+        status: true,
+        visibility: true,
+        createdAt: true,
+        _count: { select: { participants: true } },
+      },
+      orderBy: [{ createdAt: 'desc' }],
+      take: 10,
+    }),
+    prisma.user.findMany({
+      select: { id: true, email: true, name: true, role: true },
+      orderBy: [{ id: 'desc' }],
+      take: 10,
+    }),
+  ]);
 
   return (
     <main>
-      <Container id="admin-dashboard" fluid className="py-3">
-        <Row>
-          <Col>
-            <h1>Admin Dashboard</h1>
-            <Link href="/admin/verify-matches" passHref legacyBehavior>
-              <Button variant="primary" className="mt-2">Verify Match Results (Database)</Button>
-            </Link>
-          </Col>
-        </Row>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h1 className="m-0">Admin Dashboard</h1>
+        <div className="d-flex gap-2 flex-wrap">
+          <Link href="/admin/users" className="btn btn-outline-light btn-sm">
+            Manage Users
+          </Link>
+          <Link href="/admin/elo" className="btn btn-outline-light btn-sm">
+            View Elo Ratings
+          </Link>
+          <Link href="/admin/events" className="btn btn-outline-light btn-sm">
+            Manage Events
+          </Link>
+          <Link href="/admin/verify-matches" className="btn btn-primary btn-sm">
+            Verify Match Results
+          </Link>
+        </div>
+      </div>
 
-        {/* Pending Match Approvals Section */}
-        {pendingMatches.length > 0 && (
-          <Row className="mt-4">
-            <Col>
-              <h2>
-                Pending Match Approvals 
-                <Badge bg="warning" className="ms-2">{pendingMatches.length}</Badge>
-              </h2>
-              <Card className="p-3">
-                {pendingMatches.map(match => (
-                  <div key={match.id} className="mb-3 pb-3" style={{ borderBottom: '1px solid #dee2e6' }}>
-                    <Row className="align-items-center">
-                      <Col md={6}>
-                        <h5 className="mb-1">
-                          {match.team1Name} ({match.team1Score}) vs {match.team2Name} ({match.team2Score})
-                        </h5>
-                        <div className="text-muted small">
-                          <div><strong>Game:</strong> {match.gameName}</div>
-                          <div><strong>Date:</strong> {new Date(match.matchDate + 'T' + match.matchTime).toLocaleString()}</div>
-                          <div><strong>Submitted by:</strong> {match.submittedBy}</div>
-                        </div>
-                      </Col>
-                      <Col md={3}>
-                        <Badge bg={match.team1Score > match.team2Score ? 'success' : 'info'} className="p-2">
-                          Winner: {match.team1Score > match.team2Score ? match.team1Name : match.team2Name}
-                        </Badge>
-                      </Col>
-                      <Col md={3} className="text-end">
-                        <Button 
-                          size="sm" 
-                          variant="success"
-                          className="me-2"
-                          onClick={() => handleApproveMatch(match.id)}
-                        >
-                          Approve
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="danger"
-                          onClick={() => handleRejectMatch(match.id)}
-                        >
-                          Reject
-                        </Button>
-                      </Col>
-                    </Row>
-                  </div>
-                ))}
-              </Card>
-            </Col>
-          </Row>
+      <div className="mb-4">
+        <PendingMatchApprovalsClient />
+      </div>
+
+      <Card className="ca-feature-card p-3 mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <h2 className="h5 m-0">Recent Tournaments</h2>
+          <Link href="/admin/events" className="btn btn-outline-light btn-sm">
+            View All
+          </Link>
+        </div>
+
+        {tournaments.length === 0 ? (
+          <div className="text-muted">No tournaments in the database.</div>
+        ) : (
+          <Table responsive hover variant="dark" className="m-0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Game</th>
+                <th>Status</th>
+                <th>Visibility</th>
+                <th>Participants</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {tournaments.map((t) => (
+                <tr key={t.id}>
+                  <td>{t.id}</td>
+                  <td>{t.name}</td>
+                  <td>{t.game}</td>
+                  <td>{t.status}</td>
+                  <td>{t.visibility}</td>
+                  <td>{t._count.participants}</td>
+                  <td className="text-end">
+                    <Link href={`/admin/events/${t.id}`} className="btn btn-outline-light btn-sm">
+                      Manage
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
         )}
+      </Card>
 
-        {/* Tournaments section */}
-        <Row className="mt-4">
-          <Col>
-            <h2>All Tournaments</h2>
-            <Table striped bordered hover responsive>
-              <thead>
-                <tr>
-                  <th>Info</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="text-muted">No tournaments in database yet. Use Prisma Studio to add tournaments.</td>
-                </tr>
-              </tbody>
-            </Table>
-          </Col>
-        </Row>
+      <Card className="ca-feature-card p-3">
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <h2 className="h5 m-0">Recent Users</h2>
+          <Link href="/admin/users" className="btn btn-outline-light btn-sm">
+            View All
+          </Link>
+        </div>
 
-        {/* Users section */}
-        <Row className="mt-4">
-          <Col>
-            <h2>All Users</h2>
-            <Table striped bordered hover responsive>
-              <thead>
-                <tr>
-                  <th>Info</th>
+        {users.length === 0 ? (
+          <div className="text-muted">No users in the database.</div>
+        ) : (
+          <Table responsive hover variant="dark" className="m-0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Email</th>
+                <th>Name</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td>{u.id}</td>
+                  <td>{u.email}</td>
+                  <td>{u.name}</td>
+                  <td>{u.role}</td>
                 </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="text-muted">User data available via database queries.</td>
-                </tr>
-              </tbody>
-            </Table>
-          </Col>
-        </Row>
-      </Container>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Card>
     </main>
   );
-};
-
-export default AdminPage;
+}

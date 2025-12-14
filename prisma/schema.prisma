@@ -19,12 +19,15 @@ model User {
   submittedReports    MatchReport[]         @relation("ReportedByUser")
   participants        Participant[]
   teamMemberships     TeamMember[]
+  gameRatings         PlayerGameRating[]
 }
 
 model Tournament {
   id              Int                   @id @default(autoincrement())
   name            String
   game            String
+  supportedGameId Int?
+  seedBySkill     Boolean               @default(false)
   startDate       DateTime
   endDate         DateTime?
   status          String                @default("upcoming")
@@ -41,6 +44,35 @@ model Tournament {
   matches         Match[]
   participants    Participant[]
   teams           Team[]
+
+  supportedGame   Game?                 @relation(fields: [supportedGameId], references: [id], onDelete: SetNull)
+}
+
+model Game {
+  id         Int          @id @default(autoincrement())
+  key        String       @unique
+  name       String
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  tournaments Tournament[]
+  ratings    PlayerGameRating[]
+}
+
+model PlayerGameRating {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  gameId      Int
+  rating      Int      @default(1500)
+  gamesPlayed Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+  @@index([gameId])
 }
 
 model Team {
@@ -106,17 +138,21 @@ model Match {
   createdAt    DateTime      @default(now())
   location     String?
   nextMatchId  Int?
+  nextMatchSlot MatchSlot?
+  loserNextMatchId Int?
+  loserNextMatchSlot MatchSlot?
   p1Id         Int?
   p1Score      Int?
   p2Id         Int?
   p2Score      Int?
   roundNumber  Int?
   slotIndex    Int?
+  bracket      BracketSide   @default(WINNERS)
   status       MatchStatus   @default(PENDING)
-  checkIn1     Boolean       @default(false)
-  checkIn2     Boolean       @default(false)
   nextMatch    Match?        @relation("MatchNext", fields: [nextMatchId], references: [id])
   children     Match[]       @relation("MatchNext")
+  loserNextMatch Match?      @relation("MatchLoserNext", fields: [loserNextMatchId], references: [id])
+  loserChildren  Match[]     @relation("MatchLoserNext")
   p1           Participant?  @relation("MatchP1", fields: [p1Id], references: [id])
   p2           Participant?  @relation("MatchP2", fields: [p2Id], references: [id])
   tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
@@ -165,6 +201,18 @@ enum Role {
 
 enum EventFormat {
   SINGLE_ELIM
+  DOUBLE_ELIM
+}
+
+enum MatchSlot {
+  P1
+  P2
+}
+
+enum BracketSide {
+  WINNERS
+  LOSERS
+  FINALS
 }
 
 enum MatchStatus {

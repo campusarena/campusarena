@@ -19,10 +19,28 @@ interface ParticipantsTableProps {
 export default function ParticipantsTable({ participants }: ParticipantsTableProps) {
   const [sortMode, setSortMode] = useState<SortMode>("seed");
 
+  // 🔹 Always compute standings order by record (wins desc, losses asc, seed asc)
+  const recordSorted = [...participants].sort((a, b) => {
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    if (a.losses !== b.losses) return a.losses - b.losses;
+
+    const seedA = a.seed ?? Number.POSITIVE_INFINITY;
+    const seedB = b.seed ?? Number.POSITIVE_INFINITY;
+    return seedA - seedB;
+  });
+
+  // Map participantId → 1-based place
+  const placeById = new Map<number, number>();
+  recordSorted.forEach((p, index) => {
+    placeById.set(p.participantId, index + 1);
+  });
+
+  // What order do we *display* rows in?
   const sortedParticipants = [...participants].sort((a, b) => {
     if (sortMode === "seed") {
-      return (a.seed ?? Number.POSITIVE_INFINITY) -
-        (b.seed ?? Number.POSITIVE_INFINITY);
+      const seedA = a.seed ?? Number.POSITIVE_INFINITY;
+      const seedB = b.seed ?? Number.POSITIVE_INFINITY;
+      return seedA - seedB;
     }
 
     if (sortMode === "name") {
@@ -34,11 +52,27 @@ export default function ParticipantsTable({ participants }: ParticipantsTablePro
         (b.seed ?? Number.POSITIVE_INFINITY);
     }
 
+    // "record" mode uses same comparator as recordSorted
     if (b.wins !== a.wins) return b.wins - a.wins;
     if (a.losses !== b.losses) return a.losses - b.losses;
-    return (a.seed ?? Number.POSITIVE_INFINITY) -
-      (b.seed ?? Number.POSITIVE_INFINITY);
+    const seedA = a.seed ?? Number.POSITIVE_INFINITY;
+    const seedB = b.seed ?? Number.POSITIVE_INFINITY;
+    return seedA - seedB;
   });
+
+  const getPlaceLabel = (place: number | undefined): string => {
+    if (!place || place > 3) return "";
+    if (place === 1) return "1st";
+    if (place === 2) return "2nd";
+    return "3rd";
+  };
+
+  const getRowClassName = (place: number | undefined): string => {
+    if (!place || place > 3) return "";
+    if (place === 1) return "ca-standings-row-first";
+    if (place === 2) return "ca-standings-row-second";
+    return "ca-standings-row-third";
+  };
 
   return (
     <div className="ca-feature-card mb-4 p-4">
@@ -63,19 +97,35 @@ export default function ParticipantsTable({ participants }: ParticipantsTablePro
         <table className="table table-sm mb-0">
           <thead>
             <tr>
+              <th className="text-center">Place</th>
               <th className="text-center">Seed</th>
               <th>Player / Team</th>
               <th className="text-center">Record</th>
             </tr>
           </thead>
           <tbody>
-            {sortedParticipants.map((p) => (
-              <tr key={p.participantId}>
-                <td className="text-center">{p.seed}</td>
-                <td>{p.name}</td>
-                <td className="text-center">{`${p.wins}-${p.losses}`}</td>
-              </tr>
-            ))}
+            {sortedParticipants.map((p) => {
+              const place = placeById.get(p.participantId);
+              const label = getPlaceLabel(place);
+              const rowClass = getRowClassName(place);
+
+              return (
+                <tr key={p.participantId} className={rowClass}>
+                  <td className="text-center">
+                    {label && (
+                      <span className={`ca-place-pill ca-place-pill-${place}`}>
+                        {label}
+                      </span>
+                    )}
+                  </td>
+                  <td className="text-center">{p.seed ?? "—"}</td>
+                  <td>{p.name}</td>
+                  <td className="text-center">
+                    {p.wins}-{p.losses}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

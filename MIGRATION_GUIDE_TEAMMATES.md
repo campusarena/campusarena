@@ -2,20 +2,16 @@
 
 ## What Changed
 
-Added Match Check-In System with new match statuses.
+Match-level check-in was removed; event-level check-in is now the only check-in.
 
 ### Database Schema Changes
 
-1. New MatchStatus enum values:
+1. MatchStatus enum values:
    - `READY` - Both players checked in
    - `IN_PROGRESS` - Match is being played
    - `COMPLETE` - Match finished
 
-2. New Match model fields:
-   - `checkIn1` Boolean (default: false)
-   - `checkIn2` Boolean (default: false)
-
-Note: No breaking changes. All existing code continues to work.
+2. Match-level check-in fields were removed from `Match`.
 
 ## Migration Steps
 
@@ -47,4 +43,4 @@ If you get errors:
 
 ## Documentation
 
-See `MATCH_STATUS_SYSTEM.md` for API documentation and usage examples.
+See `MATCH_STATUS_SYSTEM.md` for match status documentation.
