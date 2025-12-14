@@ -6,12 +6,19 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Card from 'react-bootstrap/Card';
 import Button from 'react-bootstrap/Button';
+import Badge from 'react-bootstrap/Badge';
 import Link from 'next/link';
 
-import type { DashboardData } from '@/types/dashboard';
+import type { DashboardData, DashboardEvent } from '@/types/dashboard';
 
 type DashboardClientProps = {
   data: DashboardData;
+};
+
+// Allow optional extra fields on events without breaking the base type
+type EnrichedEvent = DashboardEvent & {
+  game?: string | null;
+  roleLabel?: string | null;
 };
 
 export default function DashboardClient({ data }: DashboardClientProps) {
@@ -38,7 +45,7 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                 </Button>
               </Link>
 
-              {/* Optional generic matches page (can remove if you don't have it yet) */}
+              {/* Join Event */}
               <Link href="/join">
                 <Button
                   size="lg"
@@ -74,20 +81,45 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                   <Col md={6} className="mb-4 mb-md-0">
                     <h2 className="h5 mb-3 text-white">Active Events</h2>
 
-                    {activeEvents.map((ev) => (
-                      <Link
-                        key={ev.id}
-                        href={`/events/${ev.id}`}
-                        className="text-decoration-none"
-                      >
-                        <Card className="ca-event-card mb-2" role="link">
-                          <Card.Body>
-                            <div className="fw-semibold text-white">{ev.name}</div>
-                            <div className="text-secondary small">{ev.kind}</div>
-                          </Card.Body>
-                        </Card>
-                      </Link>
-                    ))}
+                    {activeEvents.map((raw) => {
+                      const ev = raw as EnrichedEvent;
+
+                      return (
+                        <Link
+                          key={ev.id}
+                          href={`/events/${ev.id}`}
+                          className="text-decoration-none"
+                        >
+                          <Card
+                            className="ca-event-card mb-2 ca-event-card-clickable"
+                            role="link"
+                          >
+                            <Card.Body className="d-flex justify-content-between align-items-center">
+                              <div>
+                                <div className="fw-semibold text-white">
+                                  {ev.name}
+                                </div>
+                                {ev.game && (
+                                  <div className="text-secondary small">
+                                    {ev.game}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="text-end">
+                                <Badge
+                                  bg="light"
+                                  text="dark"
+                                  className="small px-3 py-1 rounded-pill"
+                                >
+                                  {ev.roleLabel ?? ev.kind}
+                                </Badge>
+                              </div>
+                            </Card.Body>
+                          </Card>
+                        </Link>
+                      );
+                    })}
 
                     {activeEvents.length === 0 && (
                       <div className="text-secondary small">
@@ -102,7 +134,9 @@ export default function DashboardClient({ data }: DashboardClientProps) {
 
                     {upcomingMatches.map((m) => (
                       <div key={m.id} className="mb-3 ca-event-card p-3">
-                        <div className="fw-semibold text-white mb-1">{m.name}</div>
+                        <div className="fw-semibold text-white mb-1">
+                          {m.name}
+                        </div>
                         <div className="text-secondary small">{m.date}</div>
                         {m.description && (
                           <div className="text-secondary small mb-2">
@@ -139,7 +173,9 @@ export default function DashboardClient({ data }: DashboardClientProps) {
                     {recentResults.map((r) => (
                       <div key={r.id} className="mb-2">
                         <div className="fw-semibold text-white">{r.name}</div>
-                        <div className="text-secondary small">{r.description}</div>
+                        <div className="text-secondary small">
+                          {r.description}
+                        </div>
                       </div>
                     ))}
 

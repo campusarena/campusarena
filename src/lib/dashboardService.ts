@@ -91,6 +91,8 @@ export async function getDashboardDataForUser(
     id: String(p.tournament.id),
     name: p.tournament.name,
     kind: inferEventKind(),
+    game: p.tournament.game,
+    roleLabel: 'Player',
   }));
 
   // Events as staff
@@ -98,16 +100,32 @@ export async function getDashboardDataForUser(
     id: String(r.tournament.id),
     name: r.tournament.name,
     kind: inferEventKind(),
+    game: r.tournament.game,
+    roleLabel: 'Organizer',
   }));
 
-  // Deduplicate events
+  // Deduplicate events and merge roles (Organizer + Player)
   const eventMap = new Map<string, DashboardEvent>();
-  eventsAsPlayer.forEach((ev) => {
+
+  for (const ev of eventsAsPlayer) {
     eventMap.set(ev.id, ev);
-  });
-  eventsAsStaff.forEach((ev) => {
-    eventMap.set(ev.id, ev);
-  });
+  }
+
+  for (const ev of eventsAsStaff) {
+    const existing = eventMap.get(ev.id);
+    if (!existing) {
+      eventMap.set(ev.id, ev);
+    } else {
+      eventMap.set(ev.id, {
+        ...existing,
+        roleLabel:
+          existing.roleLabel === 'Player'
+            ? 'Organizer and player'
+            : existing.roleLabel,
+      });
+    }
+  }
+
   const activeEvents = Array.from(eventMap.values());
 
   // 3️⃣ Upcoming matches (for this user as participant)

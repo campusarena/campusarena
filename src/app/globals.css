@@ -377,3 +377,19 @@
 .ca-standings-table table.table > tbody > tr:hover > * {
   background-color: rgba(255, 255, 255, 0.12) !important;
 }
+
+/* =========================================================
+   CLICKABLE EVENT CARDS (DASHBOARD)
+   ========================================================= */
+
+.ca-event-card-clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ca-event-card-clickable:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+}
