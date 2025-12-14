@@ -22,6 +22,10 @@ test.describe('Public site pages', () => {
 
     // From prisma/seed.ts. Use more specific locators to avoid strict-mode
     // conflicts when there are multiple cards with the same title.
+    const publicCards = page.locator('.ca-event-card');
+    const publicCardCount = await publicCards.count();
+    expect(publicCardCount).toBeGreaterThanOrEqual(4);
+
     await expect(
       page.locator('.ca-event-card').filter({ hasText: 'Test Smash Bracket' }),
     ).toBeVisible();
@@ -31,6 +35,14 @@ test.describe('Public site pages', () => {
       .locator('.ca-event-card')
       .filter({ hasText: 'Bracket Generation Test' });
     await expect(bracketCards.first()).toBeVisible();
+
+    await expect(
+      page.locator('.ca-event-card').filter({ hasText: 'Elo Seeded Smash Bracket' }),
+    ).toBeVisible();
+
+    await expect(
+      page.locator('.ca-event-card').filter({ hasText: 'Public Extra Event' }),
+    ).toBeVisible();
 
     // Seed also creates a PRIVATE tournament that player1 is registered in.
     // The public browse page must NOT show it.

@@ -235,7 +235,7 @@ async function main() {
   // ---------------------------------------------------------------------------
   // 0. Supported games (used for skill-based seeding)
   // ---------------------------------------------------------------------------
-  await prisma.game.upsert({
+  const smashGame = await prisma.game.upsert({
     where: { key: 'smash-ultimate' },
     update: { name: 'Super Smash Bros. Ultimate', active: true },
     create: { key: 'smash-ultimate', name: 'Super Smash Bros. Ultimate', active: true },
@@ -253,16 +253,25 @@ async function main() {
 
   // Clean up any existing test data for our known tournaments so
   // repeated seeds stay deterministic and don't accumulate rows.
-  const seedTournamentIds = [1, 2, 3, 4, 5];
+  const seedTournamentIds = [1, 2, 3, 4, 5, 6, 7];
 
   // Delete child records that depend on tournaments 1-3.
   await prisma.matchReport.deleteMany({
     where: { match: { tournamentId: { in: seedTournamentIds } } },
   });
+  await prisma.invitation.deleteMany({
+    where: { tournamentId: { in: seedTournamentIds } },
+  });
   await prisma.match.deleteMany({
     where: { tournamentId: { in: seedTournamentIds } },
   });
   await prisma.participant.deleteMany({
+    where: { tournamentId: { in: seedTournamentIds } },
+  });
+  await prisma.teamMember.deleteMany({
+    where: { team: { tournamentId: { in: seedTournamentIds } } },
+  });
+  await prisma.team.deleteMany({
     where: { tournamentId: { in: seedTournamentIds } },
   });
   await prisma.eventRoleAssignment.deleteMany({
@@ -356,6 +365,35 @@ async function main() {
         },
       });
     }),
+  );
+
+  // ---------------------------------------------------------------------------
+  // 1c. Deterministic ELO ratings for Smash (used by skill-based seeding)
+  // ---------------------------------------------------------------------------
+  const eloUsers = [player1, player2, player3, player4];
+  const eloRatingsByEmail: Record<string, { rating: number; gamesPlayed: number }> = {
+    'player1@campusarena.test': { rating: 1400, gamesPlayed: 10 },
+    'player2@campusarena.test': { rating: 1650, gamesPlayed: 12 },
+    'player3@campusarena.test': { rating: 1800, gamesPlayed: 8 },
+    'player4@campusarena.test': { rating: 2000, gamesPlayed: 20 },
+  };
+
+  await Promise.all(
+    eloUsers.map((u) =>
+      prisma.playerGameRating.upsert({
+        where: { userId_gameId: { userId: u.id, gameId: smashGame.id } },
+        update: {
+          rating: eloRatingsByEmail[u.email]?.rating ?? 1500,
+          gamesPlayed: eloRatingsByEmail[u.email]?.gamesPlayed ?? 0,
+        },
+        create: {
+          userId: u.id,
+          gameId: smashGame.id,
+          rating: eloRatingsByEmail[u.email]?.rating ?? 1500,
+          gamesPlayed: eloRatingsByEmail[u.email]?.gamesPlayed ?? 0,
+        },
+      }),
+    ),
   );
 
   // ---------------------------------------------------------------------------
@@ -944,6 +982,130 @@ async function main() {
     reporterUserId: organizerUser.id,
     reviewerRoleId: completedDoubleElimOwnerRole.id,
   });
+
+  // ---------------------------------------------------------------------------
+  // 6. PUBLIC, UPCOMING Elo-seeded tournament (id=6)
+  //    - seedBySkill=true + supportedGameId set
+  //    - participants checked in with intentionally scrambled seeds
+  //    - tests will click "Regenerate Bracket" to apply ELO seeding
+  // ---------------------------------------------------------------------------
+
+  const eloSeededTournament = await prisma.tournament.upsert({
+    where: { id: 6 },
+    update: {
+      name: 'Elo Seeded Smash Bracket',
+      game: 'Super Smash Bros. Ultimate',
+      supportedGameId: smashGame.id,
+      seedBySkill: true,
+      format: EventFormat.SINGLE_ELIM,
+      isTeamBased: false,
+      status: 'upcoming',
+      visibility: 'PUBLIC',
+      maxParticipants: 16,
+      location: 'UH Mānoa Campus - Elo Lab',
+    },
+    create: {
+      name: 'Elo Seeded Smash Bracket',
+      game: 'Super Smash Bros. Ultimate',
+      supportedGameId: smashGame.id,
+      seedBySkill: true,
+      format: EventFormat.SINGLE_ELIM,
+      isTeamBased: false,
+      startDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      status: 'upcoming',
+      maxParticipants: 16,
+      location: 'UH Mānoa Campus - Elo Lab',
+      visibility: 'PUBLIC',
+      autoBracket: false,
+    },
+  });
+
+  await prisma.eventRoleAssignment.upsert({
+    where: {
+      tournamentId_userId_role: {
+        tournamentId: eloSeededTournament.id,
+        userId: organizerUser.id,
+        role: EventRole.OWNER,
+      },
+    },
+    update: {},
+    create: {
+      tournamentId: eloSeededTournament.id,
+      userId: organizerUser.id,
+      role: EventRole.OWNER,
+    },
+  });
+
+  // Scramble initial seeds so tests can assert that regeneration applies ELO seeding.
+  // Expected ELO order: player4 > player3 > player2 > player1.
+  await Promise.all([
+    prisma.participant.create({
+      data: { tournamentId: eloSeededTournament.id, userId: player1.id, seed: 2, checkedIn: true },
+    }),
+    prisma.participant.create({
+      data: { tournamentId: eloSeededTournament.id, userId: player2.id, seed: 4, checkedIn: true },
+    }),
+    prisma.participant.create({
+      data: { tournamentId: eloSeededTournament.id, userId: player3.id, seed: 1, checkedIn: true },
+    }),
+    prisma.participant.create({
+      data: { tournamentId: eloSeededTournament.id, userId: player4.id, seed: 3, checkedIn: true },
+    }),
+  ]);
+
+  console.log('ELO seeded tournament fixture created (id=6).');
+
+  // ---------------------------------------------------------------------------
+  // 7. PUBLIC, UPCOMING event (id=7) - extra public fixture so /events can show
+  //    at least 4 non-completed public events for seeded users.
+  // ---------------------------------------------------------------------------
+  const extraPublicTournament = await prisma.tournament.upsert({
+    where: { id: 7 },
+    update: {
+      name: 'Public Extra Event',
+      game: 'Test Extra Game',
+      format: EventFormat.SINGLE_ELIM,
+      isTeamBased: false,
+      status: 'upcoming',
+      visibility: 'PUBLIC',
+      maxParticipants: 16,
+      location: 'UH Mānoa Campus - Extra Venue',
+    },
+    create: {
+      name: 'Public Extra Event',
+      game: 'Test Extra Game',
+      format: EventFormat.SINGLE_ELIM,
+      isTeamBased: false,
+      startDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      status: 'upcoming',
+      maxParticipants: 16,
+      location: 'UH Mānoa Campus - Extra Venue',
+      visibility: 'PUBLIC',
+    },
+  });
+
+  await prisma.eventRoleAssignment.upsert({
+    where: {
+      tournamentId_userId_role: {
+        tournamentId: extraPublicTournament.id,
+        userId: adminUser.id,
+        role: EventRole.OWNER,
+      },
+    },
+    update: {},
+    create: {
+      tournamentId: extraPublicTournament.id,
+      userId: adminUser.id,
+      role: EventRole.OWNER,
+    },
+  });
+
+  // Register player1 so /events lists this extra fixture.
+  await prisma.participant.create({
+    data: { tournamentId: extraPublicTournament.id, userId: player1.id, seed: 1, checkedIn: true },
+  });
+
+  console.log('Extra public event fixture created (id=7).');
 
   console.log('Completed double-elim tournament seed complete:');
   console.log(`  Tournament: ${completedDoubleElim.name} (id=${completedDoubleElim.id}), players=${participants.length}`);

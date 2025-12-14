@@ -9,6 +9,73 @@ function nextPowerOfTwo(n: number) {
   return p;
 }
 
+async function applySkillSeedingIfNeeded(tournamentId: number): Promise<void> {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    select: { seedBySkill: true, supportedGameId: true, isTeamBased: true },
+  });
+
+  if (!tournament) {
+    throw new Error('Tournament not found');
+  }
+
+  if (!tournament.seedBySkill || !tournament.supportedGameId) return;
+  if (tournament.isTeamBased) return;
+
+  const participants = await prisma.participant.findMany({
+    where: { tournamentId, checkedIn: true, userId: { not: null } },
+    select: { id: true, userId: true, user: { select: { name: true } } },
+  });
+
+  if (participants.length === 0) return;
+
+  const userIds = participants
+    .map((p) => p.userId)
+    .filter((id): id is number => typeof id === 'number');
+
+  if (userIds.length === 0) return;
+
+  const ratings = await prisma.playerGameRating.findMany({
+    where: {
+      gameId: tournament.supportedGameId,
+      userId: { in: userIds },
+    },
+    select: { userId: true, rating: true, gamesPlayed: true },
+  });
+
+  const ratingByUserId = new Map<number, { rating: number; gamesPlayed: number }>();
+  for (const r of ratings) {
+    ratingByUserId.set(r.userId, { rating: r.rating, gamesPlayed: r.gamesPlayed });
+  }
+
+  const ranked = participants
+    .map((p) => {
+      const meta = ratingByUserId.get(p.userId!);
+      return {
+        participantId: p.id,
+        userName: p.user?.name ?? '',
+        rating: meta?.rating ?? 1500,
+        gamesPlayed: meta?.gamesPlayed ?? 0,
+      };
+    })
+    .sort((a, b) => {
+      if (b.rating !== a.rating) return b.rating - a.rating;
+      if (b.gamesPlayed !== a.gamesPlayed) return b.gamesPlayed - a.gamesPlayed;
+      const byName = a.userName.localeCompare(b.userName);
+      if (byName !== 0) return byName;
+      return a.participantId - b.participantId;
+    });
+
+  await prisma.$transaction(
+    ranked.map((r, index) =>
+      prisma.participant.update({
+        where: { id: r.participantId },
+        data: { seed: index + 1 },
+      }),
+    ),
+  );
+}
+
 export async function regenerateSingleElimBracket(tournamentId: number) {
   // Check if any matches are completed before regenerating
   const hasCompletedMatches = await prisma.match.findFirst({
@@ -26,20 +93,13 @@ export async function regenerateSingleElimBracket(tournamentId: number) {
     throw new Error('Cannot regenerate bracket after matches have been completed');
   }
 
-  const tournament = await prisma.tournament.findUnique({
-    where: { id: tournamentId },
-    include: {
-      participants: {
-        orderBy: { seed: 'asc' },
-      },
-    },
+  await applySkillSeedingIfNeeded(tournamentId);
+
+  const participants = await prisma.participant.findMany({
+    where: { tournamentId, checkedIn: true },
+    orderBy: [{ seed: 'asc' }, { id: 'asc' }],
   });
 
-  if (!tournament) {
-    throw new Error('Tournament not found');
-  }
-
-  const participants = tournament.participants.filter((p) => p.checkedIn);
   if (participants.length === 0) {
     throw new Error('No checked-in participants to seed into the bracket');
   }
@@ -146,20 +206,13 @@ export async function regenerateDoubleElimBracket(tournamentId: number) {
     throw new Error('Cannot regenerate bracket after matches have been completed');
   }
 
-  const tournament = await prisma.tournament.findUnique({
-    where: { id: tournamentId },
-    include: {
-      participants: {
-        orderBy: { seed: 'asc' },
-      },
-    },
+  await applySkillSeedingIfNeeded(tournamentId);
+
+  const participants = await prisma.participant.findMany({
+    where: { tournamentId, checkedIn: true },
+    orderBy: [{ seed: 'asc' }, { id: 'asc' }],
   });
 
-  if (!tournament) {
-    throw new Error('Tournament not found');
-  }
-
-  const participants = tournament.participants.filter((p) => p.checkedIn);
   if (participants.length < 2) {
     throw new Error('Not enough checked-in participants to seed into the bracket');
   }
