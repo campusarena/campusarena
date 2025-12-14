@@ -44,7 +44,7 @@ test('player can create a team via join token', async ({ getUserPage }) => {
   // Expand team card to ensure membership is rendered.
   const teamCardButton = teamsSection.locator('button', { hasText: 'Team Rocket' });
   await teamCardButton.click();
-  await expect(teamsSection.getByText('Player JOHN')).toBeVisible();
+  await expect(teamsSection.getByText('John Nakamura')).toBeVisible();
 });
 
 test('player can join an existing team via join token', async ({ getUserPage }) => {
@@ -81,7 +81,7 @@ test('player can join an existing team via join token', async ({ getUserPage }) 
 
   const teamCardButton = teamsSection.locator('button', { hasText: 'Seed Team Alpha' });
   await teamCardButton.click();
-  await expect(teamsSection.getByText('Player FOO')).toBeVisible();
+  await expect(teamsSection.getByText('Maya Patel')).toBeVisible();
 });
 
 test('organizer can access Manage Teams for a team-based event', async ({ getUserPage }) => {

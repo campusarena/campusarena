@@ -253,7 +253,7 @@ async function main() {
 
   // Clean up any existing test data for our known tournaments so
   // repeated seeds stay deterministic and don't accumulate rows.
-  const seedTournamentIds = [1, 2, 3, 4, 5, 6, 7, 8];
+  const seedTournamentIds = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
   // Delete child records that depend on tournaments 1-3.
   await prisma.matchReport.deleteMany({
@@ -284,67 +284,79 @@ async function main() {
   // 1. Create some users
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@campusarena.test' },
-    update: {},
+    update: {
+      name: 'Alex Morgan',
+    },
     create: {
       email: 'admin@campusarena.test',
       password: passwordHash,
       role: Role.ADMIN,
-      name: 'Admin User',
+      name: 'Alex Morgan',
     },
   });
 
   const organizerUser = await prisma.user.upsert({
     where: { email: 'organizer@campusarena.test' },
-    update: {},
+    update: {
+      name: 'Jordan Kim',
+    },
     create: {
       email: 'organizer@campusarena.test',
       password: passwordHash,
       role: Role.USER,
-      name: 'Organizer User',
+      name: 'Jordan Kim',
     },
   });
 
   const player1 = await prisma.user.upsert({
     where: { email: 'player1@campusarena.test' },
-    update: {},
+    update: {
+      name: 'John Nakamura',
+    },
     create: {
       email: 'player1@campusarena.test',
       password: passwordHash,
       role: Role.USER,
-      name: 'Player JOHN',
+      name: 'John Nakamura',
     },
   });
 
   const player2 = await prisma.user.upsert({
     where: { email: 'player2@campusarena.test' },
-    update: {},
+    update: {
+      name: 'Maya Patel',
+    },
     create: {
       email: 'player2@campusarena.test',
       password: passwordHash,
       role: Role.USER,
-      name: 'Player FOO',
+      name: 'Maya Patel',
     },
   });
 
   const player3 = await prisma.user.upsert({
     where: { email: 'player3@campusarena.test' },
-    update: {},
+    update: {
+      name: 'Ethan Reyes',
+    },
     create: {
       email: 'player3@campusarena.test',
       password: passwordHash,
       role: Role.USER,
-      name: 'Player BAR',
+      name: 'Ethan Reyes',
     },
   });
 
   const player4 = await prisma.user.upsert({
     where: { email: 'player4@campusarena.test' },
-    update: {},
+    update: {
+      name: 'Sofia Chen',
+    },
     create: {
       email: 'player4@campusarena.test',
       password: passwordHash,
       role: Role.USER,
-      name: 'Player BAZ',
+      name: 'Sofia Chen',
     },
   });
 
@@ -354,14 +366,30 @@ async function main() {
   const extraPlayers = await Promise.all(
     Array.from({ length: 12 }, (_, i) => {
       const n = i + 5;
+      const nameByIndex: Record<number, string> = {
+        5: 'Aiden Lee',
+        6: 'Olivia Garcia',
+        7: 'Noah Johnson',
+        8: 'Emma Williams',
+        9: 'Lucas Silva',
+        10: 'Ava Thompson',
+        11: 'Mateo Rivera',
+        12: 'Isabella Martinez',
+        13: 'Ryan O\'Connor',
+        14: 'Zoe Nguyen',
+        15: 'Daniel Park',
+        16: 'Hannah Scott',
+      };
       return prisma.user.upsert({
         where: { email: `player${n}@campusarena.test` },
-        update: {},
+        update: {
+          name: nameByIndex[n] ?? `Player ${String(n).padStart(2, '0')}`,
+        },
         create: {
           email: `player${n}@campusarena.test`,
           password: passwordHash,
           role: Role.USER,
-          name: `Player ${String(n).padStart(2, '0')}`,
+          name: nameByIndex[n] ?? `Player ${String(n).padStart(2, '0')}`,
         },
       });
     }),
@@ -1206,6 +1234,145 @@ async function main() {
   ]);
 
   console.log('Team-based public event fixture created (id=8).');
+
+  // ---------------------------------------------------------------------------
+  // 9. PUBLIC, ONGOING event (id=9)
+  //    - seeded bracket with one match already verified
+  // ---------------------------------------------------------------------------
+  const ongoingTournament = await prisma.tournament.upsert({
+    where: { id: 9 },
+    update: {
+      name: 'Ongoing Smash Night',
+      game: 'Super Smash Bros. Ultimate',
+      format: EventFormat.SINGLE_ELIM,
+      isTeamBased: false,
+      status: 'ongoing',
+      visibility: 'PUBLIC',
+      maxParticipants: 16,
+      location: 'UH Mānoa Campus - Rec Center',
+    },
+    create: {
+      name: 'Ongoing Smash Night',
+      game: 'Super Smash Bros. Ultimate',
+      format: EventFormat.SINGLE_ELIM,
+      isTeamBased: false,
+      startDate: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      status: 'ongoing',
+      maxParticipants: 16,
+      location: 'UH Mānoa Campus - Rec Center',
+      visibility: 'PUBLIC',
+      autoBracket: false,
+    },
+  });
+
+  const ongoingOwnerRole = await prisma.eventRoleAssignment.upsert({
+    where: {
+      tournamentId_userId_role: {
+        tournamentId: ongoingTournament.id,
+        userId: organizerUser.id,
+        role: EventRole.OWNER,
+      },
+    },
+    update: {},
+    create: {
+      tournamentId: ongoingTournament.id,
+      userId: organizerUser.id,
+      role: EventRole.OWNER,
+    },
+    select: { id: true },
+  });
+
+  const ongoingParticipants = await Promise.all([
+    prisma.participant.create({
+      data: { tournamentId: ongoingTournament.id, userId: player1.id, seed: 1, checkedIn: true },
+    }),
+    prisma.participant.create({
+      data: { tournamentId: ongoingTournament.id, userId: player2.id, seed: 2, checkedIn: true },
+    }),
+    prisma.participant.create({
+      data: { tournamentId: ongoingTournament.id, userId: player3.id, seed: 3, checkedIn: true },
+    }),
+    prisma.participant.create({
+      data: { tournamentId: ongoingTournament.id, userId: player4.id, seed: 4, checkedIn: true },
+    }),
+  ]);
+
+  // Seeds: 1 vs 4, 2 vs 3
+  const p1 = ongoingParticipants[0];
+  const p2 = ongoingParticipants[1];
+  const p3 = ongoingParticipants[2];
+  const p4 = ongoingParticipants[3];
+
+  const ongoingFinal = await prisma.match.create({
+    data: {
+      tournamentId: ongoingTournament.id,
+      bracket: BracketSide.WINNERS,
+      roundNumber: 2,
+      slotIndex: 1,
+      status: MatchStatus.PENDING,
+    },
+    select: { id: true },
+  });
+
+  const semi1 = await prisma.match.create({
+    data: {
+      tournamentId: ongoingTournament.id,
+      bracket: BracketSide.WINNERS,
+      roundNumber: 1,
+      slotIndex: 1,
+      p1Id: p1.id,
+      p2Id: p4.id,
+      nextMatchId: ongoingFinal.id,
+      nextMatchSlot: MatchSlot.P1,
+      status: MatchStatus.PENDING,
+    },
+    select: { id: true },
+  });
+
+  await prisma.match.create({
+    data: {
+      tournamentId: ongoingTournament.id,
+      bracket: BracketSide.WINNERS,
+      roundNumber: 1,
+      slotIndex: 2,
+      p1Id: p2.id,
+      p2Id: p3.id,
+      nextMatchId: ongoingFinal.id,
+      nextMatchSlot: MatchSlot.P2,
+      status: MatchStatus.PENDING,
+    },
+  });
+
+  // Mark one semi as verified and advance winner into the final.
+  const now = new Date(Date.now() - 30 * 60 * 1000);
+  await prisma.match.update({
+    where: { id: semi1.id },
+    data: {
+      p1Score: 2,
+      p2Score: 0,
+      winnerId: p1.id,
+      status: MatchStatus.VERIFIED,
+      completedAt: now,
+    },
+  });
+  await prisma.match.update({
+    where: { id: ongoingFinal.id },
+    data: { p1Id: p1.id },
+  });
+  await prisma.matchReport.create({
+    data: {
+      matchId: semi1.id,
+      reportedById: organizerUser.id,
+      p1Score: 2,
+      p2Score: 0,
+      winnerParticipantId: p1.id,
+      status: 'APPROVED',
+      reviewedAt: now,
+      reviewedByRoleId: ongoingOwnerRole.id,
+    },
+  });
+
+  console.log('Ongoing public event fixture created (id=9).');
 
   console.log('Completed double-elim tournament seed complete:');
   console.log(`  Tournament: ${completedDoubleElim.name} (id=${completedDoubleElim.id}), players=${participants.length}`);

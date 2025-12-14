@@ -50,5 +50,5 @@ test('organizer can regenerate bracket and seeds follow ELO rating order', async
   // UI sanity: top seed appears first in the participants table.
   const firstRow = page.locator('.ca-standings-table table tbody tr').first();
   await expect(firstRow).toContainText('1');
-  await expect(firstRow).toContainText('Player BAZ');
+  await expect(firstRow).toContainText('Sofia Chen');
 });
